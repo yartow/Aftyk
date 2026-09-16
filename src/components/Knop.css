@@ -1,0 +1,59 @@
+.knop {
+  min-height: var(--raakdoel-min);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius);
+  border: 0.125rem solid transparent;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background-color 0.1s ease, transform 0.05s ease;
+}
+
+.knop:active {
+  transform: scale(0.98);
+}
+
+.knop:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.knop--vol {
+  width: 100%;
+}
+
+.knop--primair {
+  background: var(--kleur-primair);
+  color: var(--kleur-primair-tekst);
+}
+.knop--primair:hover:not(:disabled) {
+  background: var(--kleur-primair-donker);
+}
+
+.knop--secundair {
+  background: var(--kleur-oppervlak);
+  color: var(--kleur-tekst);
+  border-color: var(--kleur-rand);
+}
+.knop--secundair:hover:not(:disabled) {
+  border-color: var(--kleur-primair);
+}
+
+.knop--gevaar {
+  background: var(--kleur-fout-vlak);
+  color: var(--kleur-fout);
+  border-color: var(--kleur-fout);
+}
+
+.knop--tekst {
+  background: transparent;
+  color: var(--kleur-primair);
+  min-height: auto;
+  padding: 0.5rem 0.5rem;
+  font-weight: 500;
+  text-decoration: underline;
+}

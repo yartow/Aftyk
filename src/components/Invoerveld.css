@@ -1,0 +1,31 @@
+.invoerveld {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+.invoerveld-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.invoerveld-input {
+  min-height: var(--raakdoel-min);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 0.125rem solid var(--kleur-rand);
+  background: var(--kleur-oppervlak);
+  color: var(--kleur-tekst);
+  font-size: 1.0625rem;
+  width: 100%;
+}
+
+.invoerveld-input:focus {
+  border-color: var(--kleur-primair);
+}
+
+.invoerveld-textarea {
+  min-height: 6rem;
+  resize: vertical;
+}

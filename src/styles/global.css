@@ -1,0 +1,204 @@
+/*
+  Ontwerptokens en basisstijl.
+
+  Belangrijkste eisen waarop dit bestand is gebouwd:
+  - Tekst- en knopgrootte moeten samen schaalbaar zijn (drie standen), voor
+    slechtziendheid en dikke vingers. Dit gebeurt via `--basis-lettergrootte`
+    op <html>, gezet door het instellingenscherm — NIET via browser-zoom.
+  - Alles is in `rem` uitgedrukt zodat knoppen, vinkjes en witruimte
+    meeschalen met de tekstgrootte.
+  - Nooit kleur als enige informatiedrager (kleurenblindheid): elke status
+    heeft ook een pictogram en een woord.
+  - Minimale aanraakdoelen van 64px (normaal) tot ~100px (extra groot).
+*/
+
+:root {
+  color-scheme: light;
+
+  /* Basis-lettergrootte: wordt overschreven door data-tekstgrootte hieronder. */
+  --basis-lettergrootte: 16px;
+
+  /* Kleuren — blauw/amber in plaats van rood/groen, veilig voor de meest
+     voorkomende vormen van kleurenblindheid (deuteranopie/protanopie). */
+  --kleur-achtergrond: #f7f8f7;
+  --kleur-oppervlak: #ffffff;
+  --kleur-tekst: #1a1d1f;
+  --kleur-tekst-zwak: #52585c;
+  --kleur-rand: #c7ccd0;
+
+  --kleur-primair: #0f5e8c;
+  --kleur-primair-donker: #0a4a70;
+  --kleur-primair-tekst: #ffffff;
+
+  --kleur-gedaan: #0f5e8c;
+  --kleur-gedaan-vlak: #dceaf3;
+  --kleur-niet-gedaan: #7a4b00;
+  --kleur-niet-gedaan-vlak: #fbe8c8;
+  --kleur-waarschuwing: #7a4b00;
+  --kleur-waarschuwing-vlak: #fbe8c8;
+  --kleur-fout: #8a1f2b;
+  --kleur-fout-vlak: #f6dade;
+
+  --schaduw-kaart: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  /* Aanraakdoel- en afstandsmaten, in rem zodat ze meeschalen met tekst. */
+  --raakdoel-min: 4rem;
+  --radius: 0.75rem;
+  --ruimte-xs: 0.5rem;
+  --ruimte-s: 0.75rem;
+  --ruimte-m: 1rem;
+  --ruimte-l: 1.5rem;
+  --ruimte-xl: 2.5rem;
+
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Systeeminstelling volgen wanneer de gebruiker geen expliciete keuze maakte. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-thema="licht"]) {
+    color-scheme: dark;
+    --kleur-achtergrond: #14181a;
+    --kleur-oppervlak: #1e2427;
+    --kleur-tekst: #eef1f2;
+    --kleur-tekst-zwak: #b7bfc4;
+    --kleur-rand: #3a4247;
+
+    --kleur-primair: #4da3d9;
+    --kleur-primair-donker: #7cc0ea;
+    --kleur-primair-tekst: #0b1114;
+
+    --kleur-gedaan: #4da3d9;
+    --kleur-gedaan-vlak: #16333f;
+    --kleur-niet-gedaan: #e0ab55;
+    --kleur-niet-gedaan-vlak: #3a2e14;
+    --kleur-waarschuwing: #e0ab55;
+    --kleur-waarschuwing-vlak: #3a2e14;
+    --kleur-fout: #e88b95;
+    --kleur-fout-vlak: #3d1a1e;
+
+    --schaduw-kaart: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-thema="donker"] {
+  color-scheme: dark;
+  --kleur-achtergrond: #14181a;
+  --kleur-oppervlak: #1e2427;
+  --kleur-tekst: #eef1f2;
+  --kleur-tekst-zwak: #b7bfc4;
+  --kleur-rand: #3a4247;
+
+  --kleur-primair: #4da3d9;
+  --kleur-primair-donker: #7cc0ea;
+  --kleur-primair-tekst: #0b1114;
+
+  --kleur-gedaan: #4da3d9;
+  --kleur-gedaan-vlak: #16333f;
+  --kleur-niet-gedaan: #e0ab55;
+  --kleur-niet-gedaan-vlak: #3a2e14;
+  --kleur-waarschuwing: #e0ab55;
+  --kleur-waarschuwing-vlak: #3a2e14;
+  --kleur-fout: #e88b95;
+  --kleur-fout-vlak: #3d1a1e;
+
+  --schaduw-kaart: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Drie tekstgroottes. Alle afmetingen in de app zijn in rem, dus dit schaalt
+   ook knoppen, vinkjes, padding en aanraakdoelen mee. */
+:root[data-tekstgrootte="normaal"] { --basis-lettergrootte: 16px; }
+:root[data-tekstgrootte="groot"] { --basis-lettergrootte: 20px; }
+:root[data-tekstgrootte="extra-groot"] { --basis-lettergrootte: 25px; }
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: var(--basis-lettergrootte);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--kleur-achtergrond);
+  color: var(--kleur-tekst);
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, system-ui, sans-serif;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+img {
+  max-width: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--kleur-primair);
+}
+
+/* Zichtbare focusring voor toetsenbord- en schakelaarbediening — nooit
+   verwijderen ten gunste van "netter" ogende, onzichtbare focus. */
+:focus-visible {
+  outline: 0.2rem solid var(--kleur-primair);
+  outline-offset: 0.15rem;
+}
+
+.app-scherm {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-inhoud {
+  flex: 1;
+  width: 100%;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: var(--ruimte-l) var(--ruimte-m);
+  padding-bottom: calc(var(--ruimte-xl) + env(safe-area-inset-bottom, 0px));
+}
+
+.app-koptekst {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--kleur-oppervlak);
+  border-bottom: 1px solid var(--kleur-rand);
+  padding: var(--ruimte-m);
+  display: flex;
+  align-items: center;
+  gap: var(--ruimte-s);
+}
+
+.app-koptekst h1 {
+  font-size: 1.25rem;
+  margin: 0;
+  flex: 1;
+}
+
+.tekst-zwak {
+  color: var(--kleur-tekst-zwak);
+}
+
+.visueel-verborgen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

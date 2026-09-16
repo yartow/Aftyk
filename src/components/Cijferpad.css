@@ -1,0 +1,43 @@
+.cijferpad-stippen {
+  display: flex;
+  justify-content: center;
+  gap: var(--ruimte-m);
+  margin-bottom: var(--ruimte-l);
+}
+
+.cijferpad-stip {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: 0.125rem solid var(--kleur-primair);
+  background: transparent;
+}
+
+.cijferpad-stip--gevuld {
+  background: var(--kleur-primair);
+}
+
+.cijferpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ruimte-m);
+  max-width: 22rem;
+  margin: 0 auto;
+}
+
+.cijferpad-toets {
+  aspect-ratio: 1;
+  min-height: var(--raakdoel-min);
+  border-radius: 50%;
+  border: 0.125rem solid var(--kleur-rand);
+  background: var(--kleur-oppervlak);
+  color: var(--kleur-tekst);
+  font-size: 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cijferpad-toets:active {
+  background: var(--kleur-gedaan-vlak);
+  border-color: var(--kleur-primair);
+}

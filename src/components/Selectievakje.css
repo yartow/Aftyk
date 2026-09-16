@@ -1,0 +1,74 @@
+.selectievakje-rij {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ruimte-m);
+  width: 100%;
+  min-height: 5rem;
+  padding: var(--ruimte-m);
+  background: var(--kleur-oppervlak);
+  border: 0.125rem solid var(--kleur-rand);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.selectievakje-rij--gedaan {
+  border-color: var(--kleur-gedaan);
+  background: var(--kleur-gedaan-vlak);
+}
+
+.selectievakje-doos {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.5rem;
+  border: 0.1875rem solid var(--kleur-rand);
+  background: var(--kleur-oppervlak);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--kleur-primair-tekst);
+}
+
+.selectievakje-doos--gedaan {
+  background: var(--kleur-gedaan);
+  border-color: var(--kleur-gedaan);
+}
+
+.selectievakje-tekst {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 0.25rem;
+}
+
+.selectievakje-label {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.selectievakje-verplicht {
+  color: var(--kleur-fout);
+}
+
+.selectievakje-hulptekst {
+  font-size: 0.9rem;
+}
+
+.selectievakje-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--kleur-niet-gedaan);
+  margin-top: 0.125rem;
+}
+
+.selectievakje-status--gedaan {
+  color: var(--kleur-gedaan);
+}

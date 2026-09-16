@@ -1,0 +1,7 @@
+.kaart {
+  background: var(--kleur-oppervlak);
+  border: 0.0625rem solid var(--kleur-rand);
+  border-radius: var(--radius);
+  box-shadow: var(--schaduw-kaart);
+  padding: var(--ruimte-m);
+}

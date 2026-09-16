@@ -1,0 +1,30 @@
+.statusbalk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ruimte-s);
+  padding: var(--ruimte-s) var(--ruimte-m);
+  background: var(--kleur-gedaan-vlak);
+  color: var(--kleur-gedaan);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-bottom: 0.0625rem solid var(--kleur-rand);
+}
+
+.statusbalk--wacht {
+  background: var(--kleur-waarschuwing-vlak);
+  color: var(--kleur-waarschuwing);
+}
+
+.statusbalk-knop {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 0.125rem solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
