@@ -4,7 +4,6 @@ import { Kaart } from "../../components/Kaart";
 import { Knop } from "../../components/Knop";
 import { db } from "../../db/db";
 import { useAuth } from "../../context/AuthContext";
-import { genereerJaaroverzichtPdf } from "../../lib/pdf";
 import { genereerCsv, downloadBlob } from "../../lib/csv";
 import { werkdatumVan } from "../../lib/format";
 import { t } from "../../i18n/nl";
@@ -35,6 +34,10 @@ export function ExporterenScherm() {
   async function exporteerPdf() {
     if (!organisatie) return;
     setBezig(true);
+    // Lazy geladen: jsPDF is fors qua bestandsgrootte en alleen nodig zodra
+    // er daadwerkelijk wordt geëxporteerd — dit houdt de dagelijkse,
+    // offline-kritieke schermen licht en snel opstartend.
+    const { genereerJaaroverzichtPdf } = await import("../../lib/pdf");
     const { alles, correctiesPerRegistratie } = await haalGegevensOp();
     const blob = genereerJaaroverzichtPdf(organisatie, alles, correctiesPerRegistratie, new Date(vanaf), new Date(totEnMet));
     downloadBlob(blob, `hygienecode-${vanaf}-tot-${totEnMet}.pdf`);

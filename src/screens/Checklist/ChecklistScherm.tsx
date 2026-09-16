@@ -72,12 +72,12 @@ export function ChecklistScherm() {
       setPoogGedaan(true);
       return;
     }
-    if (!profiel || !organisatie) return;
+    if (!profiel || !organisatie || !sjabloon || !items) return;
 
     const apparaatTijd = new Date().toISOString();
     const registratieId = nieuweId();
 
-    const antwoordenArray: AntwoordInvoer[] = items!.map((item) => {
+    const antwoordenArray: AntwoordInvoer[] = items.map((item) => {
       const standaard: AntwoordInvoer = { itemId: item.id, itemTekst: item.tekst, type: item.type };
       return antwoordVoor(item.id, standaard);
     });

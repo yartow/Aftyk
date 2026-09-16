@@ -5,6 +5,7 @@ import { AppKop } from "../../components/AppKop";
 import { Kaart } from "../../components/Kaart";
 import { urenVerschil } from "../../lib/format";
 import { t, formatteerDatumLang, formatteerDatumTijd } from "../../i18n/nl";
+import type { Correctie } from "../../types/domain";
 
 /** Detailweergave van één dag — dit is het scherm dat je aan een inspecteur laat zien. */
 export function DagDetailScherm() {
@@ -14,10 +15,9 @@ export function DagDetailScherm() {
     () => (datum ? db.registraties.where("werkdatum").equals(datum).toArray() : []),
     [datum],
   );
-  const correcties = useLiveQuery(async () => {
-    if (!registraties || registraties.length === 0) return new Map<string, Awaited<ReturnType<typeof db.correcties.toArray>>>();
-    const kaart = new Map<string, Awaited<ReturnType<typeof db.correcties.toArray>>>();
-    for (const r of registraties) {
+  const correcties = useLiveQuery<Map<string, Correctie[]>>(async () => {
+    const kaart = new Map<string, Correctie[]>();
+    for (const r of registraties ?? []) {
       kaart.set(r.id, await db.correcties.where("registratieId").equals(r.id).toArray());
     }
     return kaart;

@@ -1,15 +1,14 @@
-import { useState } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppKop } from "../../components/AppKop";
 import { Kaart } from "../../components/Kaart";
 import { Knop } from "../../components/Knop";
-import { Invoerveld } from "../../components/Invoerveld";
 import { HoofdNavigatie } from "../../components/HoofdNavigatie";
 import { Cijferpad } from "../../components/Cijferpad";
 import { useInstellingen } from "../../context/InstellingenContext";
 import { useAuth } from "../../context/AuthContext";
 import { synchroniseerNu } from "../../lib/sync";
-import { maakBackupBestand } from "../../lib/backup";
+import { maakBackupBestand, herstelBackupBestand } from "../../lib/backup";
 import { zetPincode, schakelPincodeUit, pincodeIsIngeschakeld } from "../../lib/pin";
 import { t } from "../../i18n/nl";
 import type { Tekstgrootte, Thema } from "../../types/domain";
@@ -23,6 +22,20 @@ export function InstellingenScherm() {
   const [nieuwePincode, setNieuwePincode] = useState("");
   const [syncBericht, setSyncBericht] = useState<string | null>(null);
   const [syncBezig, setSyncBezig] = useState(false);
+  const [herstelBericht, setHerstelBericht] = useState<string | null>(null);
+  const bestandsInvoerRef = useRef<HTMLInputElement>(null);
+
+  async function bestandGekozenVoorHerstel(e: ChangeEvent<HTMLInputElement>) {
+    const bestand = e.target.files?.[0];
+    e.target.value = ""; // zelfde bestand nogmaals kunnen kiezen
+    if (!bestand) return;
+    try {
+      const { aantalRegistraties } = await herstelBackupBestand(bestand);
+      setHerstelBericht(`Back-up hersteld: ${aantalRegistraties} registraties ingelezen.`);
+    } catch (fout) {
+      setHerstelBericht(fout instanceof Error ? fout.message : "Herstellen van de back-up is mislukt.");
+    }
+  }
 
   async function handSync() {
     setSyncBezig(true);
@@ -128,6 +141,17 @@ export function InstellingenScherm() {
           <Kaart style={{ display: "flex", flexDirection: "column", gap: "var(--ruimte-s)" }}>
             <Knop variant="secundair" onClick={() => maakBackupBestand()}>{t.instellingen.backupOpslaan}</Knop>
             <p className="tekst-zwak" style={{ margin: 0 }}>{t.instellingen.backupUitleg}</p>
+            <input
+              ref={bestandsInvoerRef}
+              type="file"
+              accept="application/json"
+              hidden
+              onChange={bestandGekozenVoorHerstel}
+            />
+            <Knop variant="secundair" onClick={() => bestandsInvoerRef.current?.click()}>
+              {t.instellingen.backupHerstellen}
+            </Knop>
+            {herstelBericht ? <p className="tekst-zwak" style={{ margin: 0 }}>{herstelBericht}</p> : null}
           </Kaart>
         </section>
 

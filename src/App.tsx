@@ -16,6 +16,7 @@ import { JaaroverzichtScherm } from "./screens/Archief/JaaroverzichtScherm";
 import { DagDetailScherm } from "./screens/Archief/DagDetailScherm";
 import { ExporterenScherm } from "./screens/Exporteren/ExporterenScherm";
 import { InstellingenScherm } from "./screens/Instellingen/InstellingenScherm";
+import { BijwerkMelding } from "./components/BijwerkMelding";
 
 /**
  * Bepaalt in welke fase de app zit en stuurt onbereikbare routes terug naar
@@ -90,6 +91,7 @@ export default function App() {
   return (
     <HashRouter>
       <Schermen />
+      <BijwerkMelding />
     </HashRouter>
   );
 }

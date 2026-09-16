@@ -98,6 +98,7 @@ export const t = {
     gegevensbeheer: "Gegevensbeheer",
     backupOpslaan: "Back-up opslaan als bestand",
     backupUitleg: "Bewaar dit bestand op een veilige plek, bijvoorbeeld een USB-stick.",
+    backupHerstellen: "Back-up herstellen vanaf bestand",
     bedrijfsgegevens: "Bedrijfsgegevens",
     account: "Account",
     uitloggen: "Uitloggen",
