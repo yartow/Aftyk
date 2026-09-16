@@ -10,6 +10,7 @@ export type ItemType = "vinkje" | "temperatuur" | "tekst";
 export type Rol = "eigenaar" | "medewerker";
 export type Thema = "systeem" | "licht" | "donker";
 export type Tekstgrootte = "normaal" | "groot" | "extra-groot";
+export type ArchiefWeergave = "kalender" | "lijst";
 
 export interface Organisatie {
   id: string;

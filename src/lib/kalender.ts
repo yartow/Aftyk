@@ -1,4 +1,6 @@
-import { werkdatumVan } from "../../lib/format";
+import { werkdatumVan } from "./format";
+
+export const WEEKDAGEN = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 
 export interface MaandRooster {
   jaar: number;
@@ -17,7 +19,7 @@ export function laatste12Maanden(vanaf: Date = new Date()): MaandRooster[] {
   return maanden;
 }
 
-function bouwMaandRooster(jaar: number, maand: number): MaandRooster {
+export function bouwMaandRooster(jaar: number, maand: number): MaandRooster {
   const eersteDag = new Date(jaar, maand, 1);
   const laatsteDag = new Date(jaar, maand + 1, 0);
   const label = eersteDag.toLocaleDateString("nl-NL", { month: "long", year: "numeric" });

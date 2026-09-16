@@ -6,6 +6,7 @@ import { AppKop } from "../../components/AppKop";
 import { Kaart } from "../../components/Kaart";
 import { Knop } from "../../components/Knop";
 import { Selectievakje } from "../../components/Selectievakje";
+import { DatumKiezer } from "../../components/DatumKiezer";
 import { OpmerkingVeld } from "./OpmerkingVeld";
 import { useAuth } from "../../context/AuthContext";
 import { nieuweId } from "../../lib/id";
@@ -104,18 +105,9 @@ export function ChecklistScherm() {
     <div className="app-scherm">
       <AppKop titel={sjabloon.naam} terugNaar="/vandaag" />
       <div className="app-inhoud">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--ruimte-m)" }}>
-          <label style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
-            Datum
-            <input
-              type="date"
-              className="invoerveld-input"
-              value={werkdatum}
-              max={vandaagAlsWerkdatum()}
-              onChange={(e) => setWerkdatum(e.target.value)}
-            />
-          </label>
-          <p className="tekst-zwak" style={{ margin: 0, fontWeight: 600 }}>{t.checklist.voortgang(aantalAfgerond, items.length)}</p>
+        <div style={{ marginBottom: "var(--ruimte-m)" }}>
+          <DatumKiezer label="Datum" waarde={werkdatum} max={vandaagAlsWerkdatum()} onWijzig={setWerkdatum} />
+          <p className="tekst-zwak" style={{ margin: "0.5rem 0 0 0", fontWeight: 600 }}>{t.checklist.voortgang(aantalAfgerond, items.length)}</p>
         </div>
 
         {!isVandaag(werkdatum) ? (
@@ -188,7 +180,7 @@ export function ChecklistScherm() {
 
       <div style={{ position: "sticky", bottom: 0, padding: "var(--ruimte-m)", background: "var(--kleur-oppervlak)", borderTop: "0.0625rem solid var(--kleur-rand)" }}>
         <Knop volledigeBreedte onClick={opslaan}>
-          {poogGedaan && ontbrekendeVerplichte.length > 0 ? t.algemeen.opslaan + " (toch)" : t.checklist.opslaanKnop}
+          {poogGedaan && ontbrekendeVerplichte.length > 0 ? t.checklist.opslaanTochKnop : t.checklist.opslaanKnop}
         </Knop>
       </div>
     </div>

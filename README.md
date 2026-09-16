@@ -38,13 +38,30 @@ fully functional against IndexedDB only. This is also what Chrome DevTools
 → Network → Offline should be tested against first, since it's the
 critical path in production.
 
-To connect a real backend (accounts, cross-device sync, password reset),
-follow [`supabase/README.md`](./supabase/README.md), then:
+### Three ways to run this, and which `.env` to use
+
+There are three example env files — copy whichever matches what you're
+testing to `.env` (restart `npm run dev` after changing it, Vite only
+reads `.env` at startup):
+
+| File | When to use it | Backend |
+|---|---|---|
+| [`.env.local.example`](./.env.local.example) | Reviewing screens, checklist wording, accessibility settings — the fastest loop, and what most day-to-day development should use | None — local mode, IndexedDB only |
+| [`.env.local-supabase.example`](./.env.local-supabase.example) | Testing login, RLS policies, or the sync/outbox logic without touching a real project | A local Supabase stack running in Docker on your own machine |
+| [`.env.example`](./.env.example) | Final verification before deploying, or ongoing use by the shop | Your real Supabase cloud project |
 
 ```bash
-cp .env.example .env   # fill in your Supabase project URL + anon key
+cp .env.local.example .env             # local mode (or just: rm .env)
+# — or —
+cp .env.local-supabase.example .env    # local Supabase via Docker — see supabase/README.md
+# — or —
+cp .env.example .env                   # real cloud project — fill in your own URL + key
 npm run build
 ```
+
+Setting up the real cloud project (accounts, cross-device sync, password
+reset) and running a local Supabase stack for testing are both covered in
+[`supabase/README.md`](./supabase/README.md).
 
 ## Deploying (cPanel or any static host)
 

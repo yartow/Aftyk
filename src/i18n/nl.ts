@@ -54,6 +54,7 @@ export const t = {
     temperatuurPlaceholder: "Temperatuur in °C",
     voortgang: (aantal: number, totaal: number) => `${aantal} van ${totaal} afgerond`,
     opslaanKnop: "Registratie opslaan",
+    opslaanTochKnop: "Toch opslaan",
     nietAllesIngevuld: "Niet alle verplichte punten zijn ingevuld. Toch opslaan?",
     inhaalWaarschuwing:
       "Je vult een lijst in voor een andere dag dan vandaag. Dit wordt als inhaalregistratie gemarkeerd.",
@@ -123,6 +124,9 @@ export const t = {
     titel: "Jaaroverzicht",
     ondertitel: "Laatste 12 maanden",
     exporteren: "Exporteren",
+    toonAls: "Toon als",
+    weergaveKalender: "Kalender",
+    weergaveLijst: "Lijst",
     geenRegistratie: "Geen registratie",
     dagDetailTitel: (datum: string) => `Overzicht ${datum}`,
     ingevuldDoor: (naam: string) => `Ingevuld door ${naam}`,

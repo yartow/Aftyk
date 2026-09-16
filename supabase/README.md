@@ -58,7 +58,43 @@ De "anon public" key is bewust openbaar bruikbaar (dat is ook zo bij elk
 Supabase-project) — de RLS-policies in `0001_init.sql` zijn de eigenlijke
 beveiliging, niet het geheimhouden van deze key.
 
-## 6. Voorkom dat het gratis project in slaap valt
+## 6. Lokaal testen met Docker (zonder cloud-project)
+
+Wil je inloggen, RLS of de synchronisatielogica testen zonder meteen een
+echt Supabase-project aan te maken? De Supabase CLI draait de volledige
+backend (Postgres, Auth, Studio, …) lokaal in Docker.
+
+1. **Docker** moet draaien (Docker Desktop of gelijkwaardig).
+2. Installeer de CLI eenmalig: `brew install supabase/tap/supabase`.
+3. In de projectmap:
+   ```bash
+   supabase init      # eenmalig, als supabase/config.toml nog niet bestaat
+   supabase start     # start de containers (eerste keer duurt dit even, images worden gedownload)
+   supabase db reset  # past migrations/0001_init.sql en seed.sql toe
+   ```
+4. Kopieer [`../.env.local-supabase.example`](../.env.local-supabase.example)
+   naar `.env` in de projectroot — de sleutels daarin zijn de vaste,
+   publiek bekende standaardwaarden die de CLI voor elk lokaal project
+   genereert, dus geen eigen sleutels nodig.
+5. `npm run dev` en gebruik de app zoals normaal. Er is geen account
+   vooraf aangemaakt — gebruik Supabase Studio (`http://127.0.0.1:54323`,
+   **Authentication**) om er handmatig een aan te maken, of maak er een
+   via de admin-API (zie GoTrue-documentatie).
+6. `supabase stop` sluit de containers weer af. `supabase db reset` zet
+   alles terug naar de staat direct na de migraties/seed.
+
+**Bekende beperking:** bij het testen is gebleken dat de PostgREST-versie
+die de Supabase CLI op dit moment lokaal meelevert, schrijfacties
+(INSERT/UPDATE) via de REST-API ten onrechte kan weigeren onder RLS, zelfs
+met een volledig toegankelijk beleid — dit is bevestigd als een probleem in
+de lokale Docker-images zelf (rechtstreeks geverifieerd met SQL tegen
+Postgres, buiten PostgREST om), niet in het schema of de RLS-policies van
+dit project. Lezen (bijv. het ophalen van sjablonen) werkt wel betrouwbaar
+lokaal. Voor het écht end-to-end testen van inloggen → inrichten →
+synchroniseren is een gratis cloud-project (hierboven) op dit moment
+betrouwbaarder.
+
+## 7. Voorkom dat het gratis project in slaap valt
 
 Een gratis Supabase-project pauzeert na ~7 dagen zonder verkeer. Onschuldig
 voor het tablet (het blijft gewoon lokaal doorwerken en synchroniseert
