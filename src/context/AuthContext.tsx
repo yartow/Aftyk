@@ -122,8 +122,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verstuurResetLink: AuthState["verstuurResetLink"] = async (email) => {
     if (!supabase) return { fout: "Geen Supabase-project gekoppeld." };
+    // HashRouter (zie App.tsx) — zo werkt de link zonder serverconfiguratie
+    // voor client-side routing, wat op standaard cPanel-hosting niet vanzelf werkt.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/nieuw-wachtwoord`,
+      redirectTo: `${window.location.origin}/#/nieuw-wachtwoord`,
     });
     if (error) return { fout: vertaalAuthFout(error.message) };
     return {};
