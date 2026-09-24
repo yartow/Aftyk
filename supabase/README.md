@@ -18,13 +18,60 @@ er wifi is. Deze stappen hoef je maar één keer te doen.
    Dit maakt alle tabellen aan én de RLS-policies die ervoor zorgen dat:
    - elke organisatie alleen haar eigen gegevens ziet;
    - registraties, antwoorden en correcties nooit gewijzigd of verwijderd kunnen worden (append-only) — dit is de kern van de betrouwbaarheid van het logboek voor een inspecteur.
-3. Plak daarna de inhoud van [`seed.sql`](./seed.sql) en klik **Run** voor de voorbeeldchecklists. **Vervang deze zodra de definitieve hygiënecode-lijst er is** (pas de teksten in dat bestand aan en voer het opnieuw uit).
+3. Plak daarna de inhoud van [`migrations/0002_documenten.sql`](./migrations/0002_documenten.sql) en klik **Run**. Dit maakt de tabel aan waarin het schoonmaakplan, het weekformulier en de leveranciersregistratie worden bewaard.
+4. Plak daarna [`migrations/0003_toegangscodes_locaties.sql`](./migrations/0003_toegangscodes_locaties.sql) en klik **Run**. Dit voegt toe:
+   - de tabel `locaties` (meerdere vestigingen per bedrijf) en de postadres-kolommen;
+   - de tabel `toegangscodes` en de trigger die aanmelden alleen met een geldige code toestaat (zie hoofdstuk 3b);
+   - de functie `verwijder_online_data()` achter de knop "Verwijder online data" in de app.
+
+   > Deze migratie is geschreven en op syntax gecontroleerd, maar nog **niet** uitgevoerd tegen een echte of lokale database. Draai hem eerst lokaal (hoofdstuk 6) of op een testproject en controleer de stappen onder "Testen" in hoofdstuk 3b.
 
 ## 3. Authenticatie
 
 1. **Authentication → Providers**: e-mail/wachtwoord staat standaard aan, dat is voldoende.
-2. **Authentication → Settings**: overweeg "Confirm email" uit te zetten voor het eerste, interne gebruik (één winkelier) — zo kan hij direct inloggen na het aanmaken van een account zonder op een bevestigingsmail te wachten. Zet dit weer aan zodra er onbekende mensen zich kunnen aanmelden.
+2. **Authentication → Settings**: laat "Allow new users to sign up" **aan** (aanmelden wordt afgeschermd door de toegangscode, zie 3b) en zet "Confirm email" **aan** zodra je klanten uitnodigt, zodat elk account een echt e-mailadres heeft. Voor interne tests kun je "Confirm email" tijdelijk uitzetten.
 3. **Authentication → URL Configuration**: zet de **Site URL** op waar je de app host (bijv. `https://jouwdomein.nl`).
+
+## 3b. Toegangscodes: klanten laten aanmelden
+
+Nieuwe klanten maken zelf een account via `https://jouwdomein.nl/#/aanmelden`.
+Ze hebben daarvoor een **persoonlijke code van 5 cijfers** nodig die jij ze geeft en die **maar één keer** werkt.
+Die pagina staat nergens in de app aangelinkt; je geeft de link samen met de code.
+
+**Een code aanmaken** — in Supabase → SQL Editor:
+
+```sql
+select maak_toegangscode();                                    -- één nieuwe code
+select maak_toegangscode() from generate_series(1, 5);         -- vijf codes
+select * from toegangscodes order by aangemaakt_op desc;       -- wie gebruikte welke code, en wanneer
+```
+
+**Hoe het werkt.** De app stuurt de code mee bij het aanmelden. Een trigger op
+`auth.users` controleert en verbruikt de code in één atomaire stap; is de code
+onbekend of al gebruikt, dan wordt het account niet aangemaakt. Dat kan de
+gebruiker dus niet omzeilen vanuit de app. De tabel `toegangscodes` is voor
+de app onzichtbaar. Mislukt de aanmelding om een andere reden (bijv. het
+e-mailadres bestaat al), dan wordt de code niet verbruikt.
+
+**Goed om te weten**
+- Vijf cijfers zijn 100.000 mogelijkheden: gokken is in theorie mogelijk. De aanmeldlimieten van Supabase Auth remmen dat, maar houd daarom niet veel ongebruikte codes tegelijk open en verwijder ongebruikte codes die je niet meer nodig hebt (`delete from toegangscodes where gebruikt_door is null and code = '12345';`).
+- De trigger geldt voor **alle** nieuwe gebruikers. Een gebruiker handmatig aanmaken in het dashboard ("Add user") lukt alleen als je er `{"toegangscode": "<code>"}` als *user metadata* bij geeft, of als je de trigger tijdelijk uitzet: `alter table auth.users disable trigger toegangscode_bij_aanmelding;` (en daarna weer `enable`).
+- Bestaande accounts zijn niet beïnvloed.
+
+**Testen** (nog niet gedaan, zie `TODO.md`):
+1. `select maak_toegangscode();` → aanmelden met die code lukt.
+2. Dezelfde code nogmaals → foutmelding "Ongeldige of al gebruikte toegangscode".
+3. Een verzonnen code → dezelfde foutmelding.
+4. Twee aanmeldingen tegelijk met dezelfde code → precies één slaagt.
+
+## 3c. Online gegevens verwijderen
+
+De knop **Verwijder online data** (Instellingen, na bevestiging met pincode) roept
+`verwijder_online_data()` aan. Dat wist alle gegevens van het bedrijf van de
+ingelogde gebruiker: documenten, locaties, bedrijfsgegevens, profiel en de
+oude checklist-tabellen. De **inlog blijft bestaan** en de gebruikte
+toegangscode blijft gebruikt. Wil je een gebruiker helemaal verwijderen, doe
+dat dan in Authentication → Users.
 
 ## 4. Wachtwoordherstel via e-mail (Resend)
 
@@ -70,7 +117,7 @@ backend (Postgres, Auth, Studio, …) lokaal in Docker.
    ```bash
    supabase init      # eenmalig, als supabase/config.toml nog niet bestaat
    supabase start     # start de containers (eerste keer duurt dit even, images worden gedownload)
-   supabase db reset  # past migrations/0001_init.sql en seed.sql toe
+   supabase db reset  # past de migraties toe (0001 t/m 0003)
    ```
 4. Kopieer [`../.env.local-supabase.example`](../.env.local-supabase.example)
    naar `.env` in de projectroot — de sleutels daarin zijn de vaste,
@@ -81,7 +128,7 @@ backend (Postgres, Auth, Studio, …) lokaal in Docker.
    **Authentication**) om er handmatig een aan te maken, of maak er een
    via de admin-API (zie GoTrue-documentatie).
 6. `supabase stop` sluit de containers weer af. `supabase db reset` zet
-   alles terug naar de staat direct na de migraties/seed.
+   alles terug naar de staat direct na de migraties.
 
 **Bekende beperking:** bij het testen is gebleken dat de PostgREST-versie
 die de Supabase CLI op dit moment lokaal meelevert, schrijfacties

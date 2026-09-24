@@ -1,0 +1,41 @@
+.demo-balk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ruimte-s);
+  padding: var(--ruimte-s) var(--ruimte-m);
+  background: var(--kleur-waarschuwing-vlak);
+  color: var(--kleur-waarschuwing);
+  border-bottom: 0.125rem solid var(--kleur-waarschuwing);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.demo-knop {
+  min-height: 2.5rem;
+  padding: 0.25rem 0.875rem;
+  border: 0.125rem solid currentColor;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Blijft zichtbaar tijdens scrollen, zodat het nooit onduidelijk is dat dit een demo is. */
+.demo-label {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 4.75rem);
+  left: 0.5rem;
+  z-index: 60;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: var(--kleur-waarschuwing);
+  color: var(--kleur-oppervlak);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}

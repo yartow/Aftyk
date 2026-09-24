@@ -1,0 +1,21 @@
+.segment-groep { display: flex; flex-direction: column; gap: 0.375rem; }
+
+.segment { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.segment-knop {
+  flex: 1 1 0;
+  min-width: 4rem;
+  min-height: var(--raakdoel-min);
+  padding: 0.5rem 0.75rem;
+  border: 0.125rem solid var(--kleur-rand);
+  border-radius: var(--radius);
+  background: var(--kleur-oppervlak);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segment-knop--gekozen {
+  background: var(--kleur-gedaan-vlak);
+  border-color: var(--kleur-gedaan);
+  color: var(--kleur-gedaan);
+}

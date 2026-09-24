@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { bouwMaandRooster, WEEKDAGEN } from "../lib/kalender";
-import { formatteerDatumLang } from "../i18n/nl";
+import { bouwMaandRooster, weekdagen } from "../lib/kalender";
+import { formatteerDatumLang, t } from "../i18n";
 import "./DatumKiezer.css";
 
 interface DatumKiezerProps {
@@ -75,7 +75,7 @@ export function DatumKiezer({ label, waarde, max, onWijzig }: DatumKiezerProps) 
       {open ? (
         <div className="datumkiezer-paneel">
           <div className="datumkiezer-nav">
-            <button type="button" className="datumkiezer-navknop" onClick={vorigeMaand} aria-label="Vorige maand">
+            <button type="button" className="datumkiezer-navknop" onClick={vorigeMaand} aria-label={t.algemeen.vorigeMaand}>
               ‹
             </button>
             <span className="datumkiezer-maandlabel">{rooster.label}</span>
@@ -84,13 +84,13 @@ export function DatumKiezer({ label, waarde, max, onWijzig }: DatumKiezerProps) 
               className="datumkiezer-navknop"
               onClick={volgendeMaand}
               disabled={!kanVolgende}
-              aria-label="Volgende maand"
+              aria-label={t.algemeen.volgendeMaand}
             >
               ›
             </button>
           </div>
           <div className="datumkiezer-weekdagen">
-            {WEEKDAGEN.map((dag) => (
+            {weekdagen().map((dag) => (
               <span key={dag}>{dag}</span>
             ))}
           </div>

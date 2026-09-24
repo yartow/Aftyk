@@ -20,6 +20,9 @@ export async function verstuurOrganisatieEnProfiel(organisatie: Organisatie, pro
     contactpersoon: organisatie.contactpersoon,
     telefoon: organisatie.telefoon,
     email: organisatie.email,
+    post_adres: organisatie.postAdres,
+    post_postcode: organisatie.postPostcode,
+    post_plaats: organisatie.postPlaats,
   });
 
   await supabase.from("profielen").upsert({
@@ -54,6 +57,9 @@ export async function haalOrganisatieEnProfielOp(gebruikerId: string): Promise<{
     contactpersoon: orgRij.contactpersoon,
     telefoon: orgRij.telefoon,
     email: orgRij.email,
+    postAdres: orgRij.post_adres ?? "",
+    postPostcode: orgRij.post_postcode ?? "",
+    postPlaats: orgRij.post_plaats ?? "",
     bijgewerktOp: orgRij.bijgewerkt_op ?? new Date().toISOString(),
   };
   const profiel: Profiel = {

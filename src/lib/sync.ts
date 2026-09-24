@@ -1,8 +1,11 @@
 import { db, zetInstelling, haalInstelling } from "../db/db";
+import { verstuurOrganisatieEnProfiel } from "./orgSync";
 import { supabase } from "./supabase";
-import type { Correctie, Registratie, Sjabloon, SjabloonItem } from "../types/domain";
+import { t } from "../i18n";
+import type { Document, Locatie } from "../types/domain";
 
 const SLEUTEL_LAATSTE_SYNC = "laatste_sync_op";
+export const SLEUTEL_GEPAUZEERD = "sync_gepauzeerd";
 
 export interface SyncResultaat {
   gelukt: boolean;
@@ -12,72 +15,88 @@ export interface SyncResultaat {
 }
 
 /**
- * Drain de lokale uitgaande wachtrij naar Supabase. Wordt aangeroepen bij
+ * Drain de lokale uitgaande wachtrij naar Supabase en haal documenten op die
+ * elders (ander apparaat) recenter zijn bijgewerkt. Wordt aangeroepen bij
  * opstarten, wanneer `navigator.onLine` op true springt, en handmatig via de
  * "Nu synchroniseren"-knop in Instellingen.
  *
- * Belangrijk: dit blokkeert nooit het lokaal invullen van een checklist.
- * Bij elke fout (geen netwerk, server onbereikbaar, sessie verlopen) stopt
- * de synchronisatie stil en blijft alles in de lokale wachtrij staan voor
- * de volgende poging — er gaat nooit data verloren door een mislukte sync.
+ * Belangrijk: dit blokkeert nooit het lokaal invullen van een formulier. Bij
+ * elke fout (geen netwerk, server onbereikbaar, sessie verlopen) stopt de
+ * synchronisatie stil en blijft alles in de lokale wachtrij staan voor de
+ * volgende poging — er gaat nooit data verloren door een mislukte sync.
+ *
+ * Conflicten: de meest recente `bijgewerktOp` wint.
  */
-export async function synchroniseerNu(): Promise<SyncResultaat> {
+export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat> {
+  // Na "Verwijder online data" staat automatische synchronisatie uit, anders zou
+  // de lokale kopie meteen weer online komen. Handmatig synchroniseren start opnieuw.
+  if ((await haalInstelling(SLEUTEL_GEPAUZEERD)) === "true") {
+    if (!handmatig) return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: t.verwijderen.gepauzeerd };
+    await zetInstelling(SLEUTEL_GEPAUZEERD, "false");
+  }
   if (!supabase) {
-    return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: "Geen Supabase-project gekoppeld." };
+    return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: t.sync.geenProject };
   }
   if (!navigator.onLine) {
-    return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: "Geen internetverbinding." };
+    return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: t.sync.geenInternet };
   }
 
   const { data: sessieData } = await supabase.auth.getSession();
-  const sessie = sessieData.session;
-  if (!sessie) {
-    return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: "Niet ingelogd." };
+  if (!sessieData.session) {
+    return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: t.sync.nietIngelogd };
   }
 
-  await synchroniseerSjablonenNaarBeneden();
+  const organisatie = await db.organisaties.toCollection().first();
+  if (!organisatie) {
+    return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: t.sync.geenBedrijfsgegevens };
+  }
+
+  // Bedrijf en profiel moeten online bestaan voordat documenten en locaties erheen kunnen
+  // (relevant na een nieuwe start of nadat de online data is verwijderd).
+  const profiel = await db.profielen.toCollection().first();
+  if (profiel && profiel.id === sessieData.session.user.id) await verstuurOrganisatieEnProfiel(organisatie, profiel);
 
   let verstuurd = 0;
   let fouten = 0;
 
-  // Op aangemaaktOp gesorteerd: registraties gaan voor hun eventuele
-  // correcties, en de volgorde in het archief blijft logisch.
-  const wachtrij = await db.uitgaand.orderBy("aangemaaktOp").toArray();
+  // Locaties eerst: documenten verwijzen ernaar.
+  try {
+    await verstuurLocaties(organisatie.id);
+    await haalLocatiesOp();
+  } catch {
+    fouten += 1;
+  }
 
+  const wachtrij = await db.uitgaand.orderBy("aangemaaktOp").toArray();
   for (const item of wachtrij) {
     try {
-      if (item.soort === "registratie") {
-        const registratie = await db.registraties.get(item.id);
-        if (!registratie) {
-          await db.uitgaand.delete(item.id);
-          continue;
-        }
-        await verstuurRegistratie(registratie);
-      } else {
-        const correctie = await db.correcties.get(item.id);
-        if (!correctie) {
-          await db.uitgaand.delete(item.id);
-          continue;
-        }
-        // Een correctie kan pas als de bijbehorende registratie al bestaat
-        // op de server; sla anders over en probeer het bij de volgende sync.
-        const geregistreerd = await bestaatOpServer(correctie.registratieId);
-        if (!geregistreerd) continue;
-        await verstuurCorrectie(correctie);
+      const document = await db.documenten.get(item.id);
+      if (!document) {
+        await db.uitgaand.delete(item.id);
+        continue;
       }
-      await db.uitgaand.delete(item.id);
+      await verstuurDocument(organisatie.id, document);
+      // Alleen uit de wachtrij halen als het document sinds het versturen niet
+      // opnieuw is aangepast; anders blijft de nieuwere wijziging staan.
+      const huidig = await db.uitgaand.get(item.id);
+      if (huidig && huidig.aangemaaktOp === item.aangemaaktOp) await db.uitgaand.delete(item.id);
       verstuurd += 1;
     } catch (fout) {
       fouten += 1;
       await db.uitgaand.update(item.id, {
         pogingen: item.pogingen + 1,
-        laatsteFout: fout instanceof Error ? fout.message : String(fout),
+        laatsteFout: fout instanceof Error ? fout.message : (fout as { message?: string })?.message ?? String(fout),
       });
     }
   }
 
-  await zetInstelling(SLEUTEL_LAATSTE_SYNC, new Date().toISOString());
+  try {
+    await haalDocumentenOp();
+  } catch {
+    fouten += 1;
+  }
 
+  await zetInstelling(SLEUTEL_LAATSTE_SYNC, new Date().toISOString());
   return { gelukt: fouten === 0, verstuurd, fouten };
 }
 
@@ -86,118 +105,103 @@ export async function laatsteSyncTijd(): Promise<Date | null> {
   return waarde ? new Date(waarde) : null;
 }
 
-async function bestaatOpServer(registratieId: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { data, error } = await supabase.from("registraties").select("id").eq("id", registratieId).maybeSingle();
-  if (error) throw error;
-  return !!data;
-}
-
-async function verstuurRegistratie(registratie: Registratie): Promise<void> {
+async function verstuurDocument(organisatieId: string, document: Document): Promise<void> {
   if (!supabase) return;
 
-  // Idempotente upsert op de client-gegenereerde UUID: een sync die
-  // halverwege afbreekt en opnieuw wordt geprobeerd, veroorzaakt nooit
-  // dubbele registraties.
-  const { error: registratieFout } = await supabase.from("registraties").upsert(
+  // Nieuwste wint: sla over als de server al een recentere versie heeft.
+  const { data: bestaand, error: leesFout } = await supabase
+    .from("documenten")
+    .select("bijgewerkt_op")
+    .eq("id", document.id)
+    .maybeSingle();
+  if (leesFout) throw leesFout;
+  if (bestaand && new Date(bestaand.bijgewerkt_op) > new Date(document.bijgewerktOp)) return;
+
+  const { error } = await supabase.from("documenten").upsert(
     {
-      id: registratie.id,
-      organisatie_id: registratie.organisatieId,
-      sjabloon_id: registratie.sjabloonId,
-      sjabloon_naam: registratie.sjabloonNaam,
-      sjabloon_versie: registratie.sjabloonVersie,
-      gebruiker_id: registratie.gebruikerId,
-      gebruiker_naam: registratie.gebruikerNaam,
-      werkdatum: registratie.werkdatum,
-      apparaat_tijd: registratie.apparaatTijd,
-      is_inhaalregistratie: registratie.isInhaalregistratie,
+      id: document.id,
+      organisatie_id: organisatieId,
+      locatie_id: document.locatieId,
+      soort: document.soort,
+      sleutel: document.sleutel,
+      inhoud: document.inhoud,
+      bijgewerkt_op: document.bijgewerktOp,
     },
-    { onConflict: "id", ignoreDuplicates: true },
-  );
-  if (registratieFout) throw registratieFout;
-
-  const antwoordenRijen = registratie.antwoorden.map((antwoord) => ({
-    id: `${registratie.id}:${antwoord.itemId}`,
-    registratie_id: registratie.id,
-    item_id: antwoord.itemId,
-    item_tekst: antwoord.itemTekst,
-    waarde_bool: antwoord.waardeBool ?? null,
-    waarde_getal: antwoord.waardeGetal ?? null,
-    waarde_tekst: antwoord.waardeTekst ?? null,
-    opmerking: antwoord.opmerking ?? null,
-  }));
-  if (antwoordenRijen.length > 0) {
-    const { error: antwoordenFout } = await supabase
-      .from("antwoorden")
-      .upsert(antwoordenRijen, { onConflict: "id", ignoreDuplicates: true });
-    if (antwoordenFout) throw antwoordenFout;
-  }
-
-  // ontvangen_op wordt uitsluitend door de server gezet (kolomstandaard
-  // now()) — de client mag dit veld niet meesturen of overschrijven.
-  const { data: opgeslagen, error: leesFout } = await supabase
-    .from("registraties")
-    .select("ontvangen_op")
-    .eq("id", registratie.id)
-    .single();
-  if (!leesFout && opgeslagen) {
-    await db.registraties.update(registratie.id, { ontvangenOp: opgeslagen.ontvangen_op });
-  }
-}
-
-async function verstuurCorrectie(correctie: Correctie): Promise<void> {
-  if (!supabase) return;
-  const { error } = await supabase.from("correcties").upsert(
-    {
-      id: correctie.id,
-      registratie_id: correctie.registratieId,
-      gebruiker_id: correctie.gebruikerId,
-      gebruiker_naam: correctie.gebruikerNaam,
-      toelichting: correctie.toelichting,
-    },
-    { onConflict: "id", ignoreDuplicates: true },
+    { onConflict: "id" },
   );
   if (error) throw error;
 }
 
-/** Haal (nieuwe versies van) sjablonen en items op en cache ze lokaal. */
-async function synchroniseerSjablonenNaarBeneden(): Promise<void> {
+async function verstuurLocaties(organisatieId: string): Promise<void> {
   if (!supabase) return;
+  const lokaal = (await db.locaties.toArray()).filter((l) => !l.organisatieId || l.organisatieId === organisatieId);
+  if (lokaal.length === 0) return;
+  const { data: server, error: leesFout } = await supabase.from("locaties").select("id, bijgewerkt_op");
+  if (leesFout) throw leesFout;
+  const serverTijden = new Map((server ?? []).map((r) => [r.id as string, new Date(r.bijgewerkt_op as string)]));
+  const teVersturen = lokaal.filter((l) => !serverTijden.has(l.id) || serverTijden.get(l.id)! < new Date(l.bijgewerktOp));
+  if (teVersturen.length === 0) return;
+  const { error } = await supabase.from("locaties").upsert(
+    teVersturen.map((l) => ({
+      id: l.id,
+      organisatie_id: organisatieId,
+      naam: l.naam,
+      adres: l.adres,
+      postcode: l.postcode,
+      plaats: l.plaats,
+      telefoon: l.telefoon,
+      actief: l.actief,
+      bijgewerkt_op: l.bijgewerktOp,
+    })),
+    { onConflict: "id" },
+  );
+  if (error) throw error;
+}
 
-  const { data: sjablonen, error: sjabloonFout } = await supabase
-    .from("sjablonen")
-    .select("*")
-    .eq("actief", true);
-  if (sjabloonFout || !sjablonen) return;
-
-  for (const rij of sjablonen as Record<string, unknown>[]) {
-    const sjabloon: Sjabloon = {
+async function haalLocatiesOp(): Promise<void> {
+  if (!supabase) return;
+  const { data, error } = await supabase.from("locaties").select("*");
+  if (error) throw error;
+  for (const rij of (data ?? []) as Record<string, unknown>[]) {
+    const lokaal = await db.locaties.get(rij.id as string);
+    if (lokaal && new Date(lokaal.bijgewerktOp) >= new Date(rij.bijgewerkt_op as string)) continue;
+    const locatie: Locatie = {
       id: rij.id as string,
-      organisatieId: (rij.organisatie_id as string | null) ?? null,
+      organisatieId: rij.organisatie_id as string,
       naam: rij.naam as string,
-      frequentie: rij.frequentie as Sjabloon["frequentie"],
-      versie: rij.versie as number,
+      adres: (rij.adres as string) ?? "",
+      postcode: (rij.postcode as string) ?? "",
+      plaats: (rij.plaats as string) ?? "",
+      telefoon: (rij.telefoon as string) ?? "",
       actief: rij.actief as boolean,
+      bijgewerktOp: rij.bijgewerkt_op as string,
     };
-    await db.sjablonen.put(sjabloon);
+    await db.locaties.put(locatie);
+  }
+}
 
-    const { data: items } = await supabase
-      .from("sjabloon_items")
-      .select("*")
-      .eq("sjabloon_id", sjabloon.id)
-      .order("volgorde", { ascending: true });
-    for (const itemRij of (items ?? []) as Record<string, unknown>[]) {
-      const item: SjabloonItem = {
-        id: itemRij.id as string,
-        sjabloonId: itemRij.sjabloon_id as string,
-        volgorde: itemRij.volgorde as number,
-        tekst: itemRij.tekst as string,
-        type: itemRij.type as SjabloonItem["type"],
-        verplicht: itemRij.verplicht as boolean,
-        hulptekst: (itemRij.hulptekst as string | undefined) ?? undefined,
-      };
-      await db.sjabloonItems.put(item);
-    }
+/** Haalt documenten op die recenter zijn dan de lokale kopie (bijv. na een tabletwissel). */
+async function haalDocumentenOp(): Promise<void> {
+  if (!supabase) return;
+  const { data, error } = await supabase.from("documenten").select("*");
+  if (error) throw error;
+  for (const rij of (data ?? []) as Record<string, unknown>[]) {
+    const id = rij.id as string;
+    // Oudere rijen zonder locatie horen bij het vorige, niet-locatiegebonden formaat.
+    if (!rij.locatie_id) continue;
+    const lokaal = await db.documenten.get(id);
+    const serverTijd = rij.bijgewerkt_op as string;
+    if (lokaal && new Date(lokaal.bijgewerktOp) >= new Date(serverTijd)) continue;
+    // Een lokale wijziging die nog in de wachtrij staat mag niet worden overschreven.
+    if (await db.uitgaand.get(id)) continue;
+    await db.documenten.put({
+      id,
+      locatieId: rij.locatie_id as string,
+      soort: rij.soort as Document["soort"],
+      sleutel: rij.sleutel as string,
+      inhoud: rij.inhoud,
+      bijgewerktOp: serverTijd,
+    });
   }
 }
 

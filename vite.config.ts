@@ -4,6 +4,8 @@ import { VitePWA } from "vite-plugin-pwa";
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Relatieve paden: de app werkt zowel in de root van een domein als in een submap (bijv. /Aftyk/).
+  base: "./",
   plugins: [
     react(),
     VitePWA({

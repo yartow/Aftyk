@@ -3,7 +3,7 @@ import { Cijferpad } from "../../components/Cijferpad";
 import { Knop } from "../../components/Knop";
 import { Invoerveld } from "../../components/Invoerveld";
 import { useAuth } from "../../context/AuthContext";
-import { t } from "../../i18n/nl";
+import { t } from "../../i18n";
 
 /**
  * Dagelijkse "inlog" op het tablet. Geen e-mailadres, geen wachtwoord bij

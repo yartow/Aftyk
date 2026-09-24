@@ -1,0 +1,20 @@
+.datumblad-knop {
+  min-height: var(--raakdoel-min);
+  padding: 0.5rem 0.875rem;
+  border: 0.125rem dashed var(--kleur-rand);
+  border-radius: var(--radius);
+  background: var(--kleur-oppervlak);
+  color: var(--kleur-tekst-zwak);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.datumblad-knop--gevuld {
+  border-style: solid;
+  border-color: var(--kleur-gedaan);
+  background: var(--kleur-gedaan-vlak);
+  color: var(--kleur-gedaan);
+}
+
+.datumblad-vandaag { text-decoration: underline; }

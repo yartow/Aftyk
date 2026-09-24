@@ -1,0 +1,40 @@
+.start-lijst { display: flex; flex-direction: column; gap: var(--ruimte-m); }
+
+.start-link { text-decoration: none; color: inherit; }
+
+.start-kaart {
+  display: flex;
+  align-items: center;
+  gap: var(--ruimte-m);
+  min-height: 6rem;
+  padding: var(--ruimte-m) var(--ruimte-l);
+}
+
+.start-link:hover .start-kaart, .start-link:focus-visible .start-kaart { border-color: var(--kleur-primair); }
+
+.start-icoon { font-size: 2.25rem; }
+
+.start-tekst { flex: 1; display: flex; flex-direction: column; gap: 0.25rem; font-size: 1.1875rem; }
+.start-tekst .tekst-zwak { font-size: 0.9375rem; }
+
+.start-pijl { font-size: 2rem; color: var(--kleur-tekst-zwak); }
+
+.start-melding { display: flex; align-items: center; justify-content: space-between; gap: var(--ruimte-m); flex-wrap: wrap; margin-bottom: var(--ruimte-m); background: var(--kleur-waarschuwing-vlak); border-color: var(--kleur-waarschuwing); text-decoration: none; }
+.start-melding .knop { text-decoration: none; }
+
+.start-locatie {
+  display: flex;
+  align-items: center;
+  gap: var(--ruimte-s);
+  width: 100%;
+  min-height: var(--raakdoel-min);
+  margin-bottom: var(--ruimte-m);
+  padding: 0.5rem var(--ruimte-m);
+  border: 0.125rem solid var(--kleur-primair);
+  border-radius: var(--radius);
+  background: var(--kleur-oppervlak);
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.start-locatie-naam { flex: 1; text-align: left; }

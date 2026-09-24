@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "../db/db";
 import { synchroniseerNu, laatsteSyncTijd, registreerAutomatischeSync } from "../lib/sync";
 import { supabaseIsGeconfigureerd } from "../lib/supabase";
-import { t, formatteerDatumTijd } from "../i18n/nl";
+import { t, formatteerDatumTijd } from "../i18n";
 import "./StatusBalk.css";
 
 /**
@@ -26,7 +26,7 @@ export function StatusBalk() {
 
   async function handSync() {
     setBezig(true);
-    await synchroniseerNu();
+    await synchroniseerNu(true);
     setLaatsteSync(await laatsteSyncTijd());
     setBezig(false);
   }
@@ -34,9 +34,9 @@ export function StatusBalk() {
   return (
     <div className={`statusbalk ${aantalOnverstuurd > 0 ? "statusbalk--wacht" : ""}`}>
       <span className="statusbalk-tekst">
-        {aantalOnverstuurd > 0 ? t.vandaag.nogNietVerstuurd(aantalOnverstuurd) : t.instellingen.synchronisatieGelukt}
+        {aantalOnverstuurd > 0 ? t.sync.nogNietVerstuurd(aantalOnverstuurd) : t.instellingen.synchronisatieGelukt}
         {" · "}
-        {laatsteSync ? t.vandaag.laatstGesynchroniseerd(formatteerDatumTijd(laatsteSync)) : t.vandaag.nooitGesynchroniseerd}
+        {laatsteSync ? t.sync.laatstGesynchroniseerd(formatteerDatumTijd(laatsteSync)) : t.sync.nooitGesynchroniseerd}
       </span>
       <button type="button" className="statusbalk-knop" onClick={handSync} disabled={bezig}>
         {bezig ? t.instellingen.bezigMetSynchroniseren : t.instellingen.nuSynchroniseren}
