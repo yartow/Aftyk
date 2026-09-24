@@ -270,7 +270,7 @@ export function maakLeveranciersPdf(bron: PdfBron, maand: Date, config: Leveranc
     startY: 92,
     head: [[l.kolLeverancier, t.pdf.kolCertificaat, t.pdf.kolVerloop, t.pdf.kolBetrouwbaarheid, t.pdf.kolOpmerking, t.pdf.kolConclusie]],
     body: config.leveranciers
-      .filter((lev) => !lev.gearchiveerd)
+      .filter((lev) => !lev.gearchiveerd || maandDoc.beoordelingen[lev.id])
       .map((lev) => {
         const b = maandDoc.beoordelingen[lev.id];
         return [

@@ -223,6 +223,31 @@ export const en: Vertaling = {
     kolLeverancier: "Supplier",
   },
 
+  leverancierslijst: {
+    titel: "View suppliers",
+    startStatus: (n) => (n === 0 ? "No suppliers yet" : `${n} ${n === 1 ? "supplier" : "suppliers"}`),
+    uitleg: "All suppliers you have entered. On a new line they are suggested as soon as you type the first letters.",
+    filter: "Show",
+    actief: "Active",
+    gearchiveerd: "Archived",
+    alle: "All",
+    kolNaam: "Name",
+    kolStatus: "Status",
+    geen: "No suppliers in this view.",
+    bewerken: "Edit",
+    naam: "Name",
+    opslaan: "Save",
+    archiveren: "Archive",
+    terugzetten: "Restore",
+    verwijderen: "Delete permanently",
+    verwijderBevestiging: (naam) =>
+      `Delete ${naam} permanently? Assessments already entered for this supplier will no longer appear in the register or the PDF. Archiving is safer.`,
+    hernoemUitleg: "A new name applies throughout the supplier register. Weekly forms already filled in keep the old spelling.",
+    naamLeeg: "Enter a name.",
+    naamBestaatAl: "This supplier is already in the list.",
+    toevoegen: "Add supplier",
+  },
+
   instellingen: {
     titel: "Settings",
     weergave: "Display",

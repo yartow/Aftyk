@@ -15,6 +15,7 @@ import { useDocument } from "../../lib/documenten";
 import { maandagVan, verschuifWeek, weekLabel, weekSleutel } from "../../lib/kalender";
 import { werkdatumVan } from "../../lib/format";
 import { nieuweId } from "../../lib/id";
+import { metLeverancier } from "../../lib/leveranciers";
 import { maakWeekformulierPdf, pdfBestandsnaam } from "../../lib/pdf";
 import {
   CCP_PROCESSEN,
@@ -81,6 +82,13 @@ export function WeekformulierScherm() {
       if (!nieuw.datum) nieuw.datum = vandaag;
       return { ...w, ccps: { ...w.ccps, [id]: nieuw } };
     });
+
+  // Pas bij het verlaten van het veld opslaan, zodat halve namen ("Vi", "Vis") nooit in de lijst komen.
+  function bewaarLeverancier(naam: string) {
+    const huidig = leveranciers.waarde;
+    if (!huidig || metLeverancier(huidig, naam) === huidig) return;
+    leveranciers.wijzig((c) => metLeverancier(c, naam));
+  }
 
   function voegOntvangstToe() {
     const rij: OntvangstRij = {
@@ -160,7 +168,7 @@ export function WeekformulierScherm() {
                     <span className="invoerveld-label">{t.weekformulier.datumControle}</span>
                     <DatumBlad waarde={r.datum} onWijzig={(d) => zetOntvangst(r.id, { datum: d })} leegLabel={t.algemeen.kiesDatum} titel={t.weekformulier.datumControle} />
                   </div>
-                  <Invoerveld id={`lev-${r.id}`} label={t.weekformulier.leverancier} list="leveranciers-lijst" value={r.leverancier} onChange={(e) => zetOntvangst(r.id, { leverancier: e.target.value })} />
+                  <Invoerveld id={`lev-${r.id}`} label={t.weekformulier.leverancier} list="leveranciers-lijst" value={r.leverancier} onChange={(e) => zetOntvangst(r.id, { leverancier: e.target.value })} onBlur={(e) => bewaarLeverancier(e.target.value)} />
                   <Invoerveld id={`prod-${r.id}`} label={t.weekformulier.product} value={r.product} onChange={(e) => zetOntvangst(r.id, { product: e.target.value })} />
                   <Invoerveld id={`temp-${r.id}`} label={t.weekformulier.temperatuur} inputMode="decimal" value={r.temperatuur} onChange={(e) => zetOntvangst(r.id, { temperatuur: alleenGetal(e.target.value, "temperatuur") })} />
                   <Segmentknop label={t.weekformulier.verpakking} opties={voOpties()} waarde={r.verpakking} onWijzig={(v: VO) => zetOntvangst(r.id, { verpakking: v })} />

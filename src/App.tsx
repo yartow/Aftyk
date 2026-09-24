@@ -14,6 +14,7 @@ import { SchoonmaakplanScherm } from "./screens/Schoonmaakplan/SchoonmaakplanSch
 import { WeekformulierScherm } from "./screens/Weekformulier/WeekformulierScherm";
 import { LocatiesScherm } from "./screens/Locaties/LocatiesScherm";
 import { LeveranciersScherm } from "./screens/Leveranciers/LeveranciersScherm";
+import { LeverancierslijstScherm } from "./screens/Leveranciers/LeverancierslijstScherm";
 import { InstellingenScherm } from "./screens/Instellingen/InstellingenScherm";
 import { inrichtingIsOvergeslagen } from "./lib/inrichting";
 import { DemoBanner } from "./components/DemoBanner";
@@ -77,6 +78,7 @@ function Schermen() {
         <Route path="/schoonmaakplan" element={<SchoonmaakplanScherm />} />
         <Route path="/weekformulier" element={<WeekformulierScherm />} />
         <Route path="/leveranciers" element={<LeveranciersScherm />} />
+        <Route path="/leveranciers/lijst" element={<LeverancierslijstScherm />} />
 
         <Route path="/instellingen" element={<InstellingenScherm />} />
         <Route path="/instellingen/locaties" element={<LocatiesScherm />} />

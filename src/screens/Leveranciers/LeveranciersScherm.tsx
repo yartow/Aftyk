@@ -9,11 +9,12 @@ import { Segmentknop } from "../../components/Segmentknop";
 import { PeriodeKiezer } from "../../components/PeriodeKiezer";
 import { DatumBlad } from "../../components/DatumBlad";
 import { PdfKeuze } from "../../components/PdfKeuze";
+import { Link } from "react-router-dom";
 import { usePdfBron, useLocatie } from "../../context/LocatieContext";
 import { bewaarDocument, haalDocument, useDocument } from "../../lib/documenten";
 import { maandLabel, maandSleutel, verschuifMaand } from "../../lib/kalender";
 import { werkdatumVan } from "../../lib/format";
-import { nieuweId } from "../../lib/id";
+import { metLeverancier } from "../../lib/leveranciers";
 import { maakLeveranciersPdf, pdfBestandsnaam } from "../../lib/pdf";
 import { t } from "../../i18n";
 import type { Betrouwbaarheid, Conclusie, LeverancierBeoordeling, LeveranciersConfig, LeveranciersMaand } from "../../types/domain";
@@ -37,8 +38,10 @@ export function LeveranciersScherm() {
   const dezeMaand = useDocument<LeveranciersMaand>("leveranciers-maand", maandSleutel(maand), () => ({ beoordelingen: {} }));
 
   if (!config.waarde || !dezeMaand.waarde) return null;
-  const lijst = config.waarde.leveranciers.filter((l) => !l.gearchiveerd);
   const beoordelingen = dezeMaand.waarde.beoordelingen;
+  // Gearchiveerde leveranciers blijven zichtbaar in maanden waarin ze zijn beoordeeld, zodat geschiedenis niet verdwijnt.
+  const lijst = config.waarde.leveranciers.filter((l) => !l.gearchiveerd || beoordelingen[l.id]);
+  const alleNamen = config.waarde.leveranciers;
 
   const zet = (id: string, deel: Partial<LeverancierBeoordeling>) =>
     dezeMaand.wijzig((m) => ({ ...m, beoordelingen: { ...m.beoordelingen, [id]: { ...LEEG, ...m.beoordelingen[id], ...deel } } }));
@@ -46,7 +49,8 @@ export function LeveranciersScherm() {
   function voegToe() {
     const naam = nieuweNaam.trim();
     if (!naam) return;
-    config.wijzig((c) => ({ ...c, leveranciers: [...c.leveranciers, { id: nieuweId(), naam, gearchiveerd: false }] }));
+    // Bestaande naam? Dan niet dubbel toevoegen (een gearchiveerde wordt teruggezet).
+    if (metLeverancier(config.waarde!, naam) !== config.waarde) config.wijzig((c) => metLeverancier(c, naam));
     setNieuweNaam("");
   }
 
@@ -81,6 +85,9 @@ export function LeveranciersScherm() {
             {t.leveranciers.kopieerVorige}
           </Knop>
           <Knop onClick={() => setPdfOpen(true)}>{t.algemeen.pdfMaken}</Knop>
+          <Link to="/leveranciers/lijst" className="knop knop--secundair">
+            {t.leverancierslijst.titel}
+          </Link>
         </div>
 
         {lijst.length === 0 ? (
@@ -97,6 +104,7 @@ export function LeveranciersScherm() {
               <Kaart key={l.id}>
                 <div className="kaart-kop">
                   <h3>{l.naam}</h3>
+                  {l.gearchiveerd ? <span className="tekst-zwak">{t.leverancierslijst.gearchiveerd}</span> : null}
                   {dagen !== null && dagen < 0 ? (
                     <span className="afwijking-badge">⚠ {t.leveranciers.verlopen}</span>
                   ) : dagen !== null && dagen <= 30 ? (
@@ -165,7 +173,12 @@ export function LeveranciersScherm() {
               voegToe();
             }}
           >
-            <Invoerveld id="nieuwe-leverancier" label={t.leveranciers.nieuweLeverancier} value={nieuweNaam} onChange={(e) => setNieuweNaam(e.target.value)} />
+            <Invoerveld id="nieuwe-leverancier" label={t.leveranciers.nieuweLeverancier} list="leveranciers-alle" autoComplete="off" value={nieuweNaam} onChange={(e) => setNieuweNaam(e.target.value)} />
+            <datalist id="leveranciers-alle">
+              {alleNamen.map((l) => (
+                <option key={l.id} value={l.naam} />
+              ))}
+            </datalist>
             <Knop type="submit" disabled={!nieuweNaam.trim()}>
               + {t.leveranciers.toevoegen}
             </Knop>

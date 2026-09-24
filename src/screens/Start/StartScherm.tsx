@@ -107,6 +107,16 @@ export function StartScherm() {
               <span aria-hidden="true" className="start-pijl">›</span>
             </Kaart>
           </Link>
+          <Link to="/leveranciers/lijst" className="start-link">
+            <Kaart className="start-kaart">
+              <span className="start-icoon" aria-hidden="true">📇</span>
+              <span className="start-tekst">
+                <strong>{t.leverancierslijst.titel}</strong>
+                <span className="tekst-zwak">{status ? t.leverancierslijst.startStatus(status.totaal) : ""}</span>
+              </span>
+              <span aria-hidden="true" className="start-pijl">›</span>
+            </Kaart>
+          </Link>
         </nav>
       </div>
       <Blad open={kiesOpen} titel={t.locaties.kies} onSluit={() => setKiesOpen(false)}>

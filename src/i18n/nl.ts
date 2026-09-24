@@ -225,6 +225,31 @@ export const nl = {
     kolLeverancier: "Leverancier",
   },
 
+  leverancierslijst: {
+    titel: "Bekijk leveranciers",
+    startStatus: (n: number) => (n === 0 ? "Nog geen leveranciers" : `${n} ${n === 1 ? "leverancier" : "leveranciers"}`),
+    uitleg: "Alle leveranciers die je hebt ingevuld. Bij een nieuwe regel krijg je ze als suggestie zodra je de eerste letters typt.",
+    filter: "Toon",
+    actief: "Actief",
+    gearchiveerd: "Gearchiveerd",
+    alle: "Alle",
+    kolNaam: "Naam",
+    kolStatus: "Status",
+    geen: "Geen leveranciers in deze weergave.",
+    bewerken: "Bewerken",
+    naam: "Naam",
+    opslaan: "Opslaan",
+    archiveren: "Archiveren",
+    terugzetten: "Terugzetten",
+    verwijderen: "Definitief verwijderen",
+    verwijderBevestiging: (naam: string) =>
+      `${naam} definitief verwijderen? Eerder ingevulde beoordelingen van deze leverancier verschijnen dan niet meer in het overzicht en de PDF. Archiveren is veiliger.`,
+    hernoemUitleg: "Een andere naam werkt overal door in de leveranciersregistratie. Al ingevulde weekformulieren houden de oude schrijfwijze.",
+    naamLeeg: "Vul een naam in.",
+    naamBestaatAl: "Deze leverancier staat al in de lijst.",
+    toevoegen: "Leverancier toevoegen",
+  },
+
   instellingen: {
     titel: "Instellingen",
     weergave: "Weergave",
