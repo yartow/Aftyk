@@ -184,11 +184,19 @@ export function maakSchoonmaakplanPdf(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
-  const letOp = `${t.schoonmaak.letOpKop} `;
-  doc.text(pdfTekst(letOp), MARGE, y);
+  const letOp = pdfTekst(`${t.schoonmaak.letOpKop} `);
+  const labelBreedte = doc.getTextWidth(letOp); // nog in vet gemeten, zoals hij getekend wordt
   doc.setFont("helvetica", "normal");
-  const regels = doc.splitTextToSize(pdfTekst(t.schoonmaak.letOpTekst), breedte - 2 * MARGE - doc.getTextWidth(letOp));
-  doc.text(regels, MARGE + doc.getTextWidth(letOp), y);
+  const regels = doc.splitTextToSize(pdfTekst(t.schoonmaak.letOpTekst), breedte - 2 * MARGE - labelBreedte);
+  // Past het blok "Let op" + frequentieregel niet meer onder de legenda, dan naar een nieuwe pagina.
+  if (y + regels.length * 11 + 30 > doc.internal.pageSize.getHeight() - MARGE) {
+    doc.addPage();
+    y = KOP_HOOGTE;
+  }
+  doc.setFont("helvetica", "bold");
+  doc.text(letOp, MARGE, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(regels, MARGE + labelBreedte, y);
   y += regels.length * 11 + 6;
   doc.text(pdfTekst(Object.entries(FREQUENTIE_NAMEN).map(([k, v]) => `${k} = ${v}`).join("      ")), MARGE, y);
 
@@ -219,7 +227,7 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
       const afwijking = r ? opslagAfwijking(e, r.temperatuur) : false;
       return [
         e.naam,
-        grensTekst(e),
+        pdfTekst(grensTekst(e)),
         datumKort(r?.datum ?? ""),
         { content: (r?.temperatuur ?? "") + (afwijking ? `  (${t.pdf.afwijkingHoofdletters})` : ""), styles: afwijking ? afwijkingStijl : {} },
         e.afgedektNvt ? w.nvt : voTekst(r?.afgedekt ?? null),
@@ -239,7 +247,7 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
       const afwijking = ccpAfwijking(p, r);
       return [
         p.naam,
-        p.grensTekst,
+        pdfTekst(p.grensTekst),
         datumKort(r?.datum ?? ""),
         r?.product ?? "",
         { content: r?.waarde ? `${r.waarde} ${p.waardeLabel}${afwijking ? `  (${t.pdf.afwijkingHoofdletters})` : ""}` : "", styles: afwijking ? afwijkingStijl : {} },
@@ -251,10 +259,15 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
   });
 
   y = eindY() + 22;
+  if (y + 14 > doc.internal.pageSize.getHeight() - MARGE) {
+    doc.addPage();
+    y = KOP_HOOGTE;
+  }
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text(
     pdfTekst(`${t.pdf.beoordeeld}: ${formulier.beoordeeldDoor || "................................"}   ${w.datum}: ${datumKort(formulier.beoordeeldOp) || "................"}`),
-    36,
+    MARGE,
     y,
   );
   return doc.output("blob");

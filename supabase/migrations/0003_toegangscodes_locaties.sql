@@ -73,6 +73,13 @@ declare
   v_code text;
   v_aantal integer;
 begin
+  -- Gebruikers die jij zelf aanmaakt (dashboard-script, admin-API, seed) slaan de
+  -- code over met app_metadata {"toegangscode_niet_nodig": true}. Bij een gewone
+  -- aanmelding kan een bezoeker app_metadata niet zetten, dus dit is niet te omzeilen.
+  if new.raw_app_meta_data ->> 'toegangscode_niet_nodig' = 'true' then
+    return new;
+  end if;
+
   v_code := new.raw_user_meta_data ->> 'toegangscode';
 
   if v_code is null or v_code !~ '^[0-9]{5}$' then

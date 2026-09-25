@@ -30,7 +30,7 @@ State after adding demo mode, data deletion, access-code sign-up, multiple locat
 - [ ] Weeks are never locked. The old checklist app was tamper-evident; this one is not. Should a finished week be lockable?
 - [ ] **Online delete keeps the login and the used access code.** A customer who deleted everything can log in and set up again; they do not need a new code. Is that what you want, or should it also delete the account?
 - [ ] **Access-code strength:** 5 digits = 100,000 possibilities. Supabase's auth rate limits slow guessing but do not stop it. Keep few unused codes open at once, delete unused ones, or consider longer codes / an attempt counter.
-- [ ] **Users created by hand** in the Supabase dashboard now fail the trigger unless you pass `toegangscode` in their metadata (or temporarily disable the trigger). Documented in `supabase/README.md`.
+- [ ] **Users created by hand** in the Supabase dashboard fail the trigger unless created through the admin API/SQL with `app_metadata` `toegangscode_niet_nodig: true`, or with `toegangscode` in user metadata. Documented in `supabase/README.md`. Migrations 0003 (bypass) and 0004 (profile policy fix) are untested against a real database.
 - [ ] **Postal address is not printed on the PDF** (only the location's address). Should it be?
 
 ## 4. Missing features

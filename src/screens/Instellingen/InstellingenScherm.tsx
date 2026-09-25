@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppKop } from "../../components/AppKop";
 import { Kaart } from "../../components/Kaart";
@@ -25,8 +25,15 @@ export function InstellingenScherm() {
   const demo = isDemo();
   const { actieveLocatie } = useLocatie();
 
-  const [pincodeStap, setPincodeStap] = useState<"uit" | "invoeren">("uit");
+  const [pincodeStap, setPincodeStap] = useState<"uit" | "invoeren" | "herhalen">("uit");
   const [nieuwePincode, setNieuwePincode] = useState("");
+  const [eerstePincode, setEerstePincode] = useState("");
+  const [pincodeAan, setPincodeAan] = useState(false);
+  const [pincodeFout, setPincodeFout] = useState(false);
+
+  useEffect(() => {
+    void pincodeIsIngeschakeld().then(setPincodeAan);
+  }, []);
   const [syncBericht, setSyncBericht] = useState<string | null>(null);
   const [syncBezig, setSyncBezig] = useState(false);
   const [herstelBericht, setHerstelBericht] = useState<string | null>(null);
@@ -53,10 +60,24 @@ export function InstellingenScherm() {
 
   async function pincodeBevestigen(waarde: string) {
     setNieuwePincode(waarde);
-    if (waarde.length === 4) {
+    if (waarde.length !== 4) return;
+    if (pincodeStap === "invoeren") {
+      // Twee keer invoeren, zodat één verkeerd getikt cijfer je niet buitensluit.
+      setEerstePincode(waarde);
+      setNieuwePincode("");
+      setPincodeFout(false);
+      setPincodeStap("herhalen");
+    } else if (waarde === eerstePincode) {
       await zetPincode(waarde);
+      setPincodeAan(true);
       setPincodeStap("uit");
       setNieuwePincode("");
+      setEerstePincode("");
+    } else {
+      setPincodeFout(true);
+      setNieuwePincode("");
+      setEerstePincode("");
+      setPincodeStap("invoeren");
     }
   }
 
@@ -120,27 +141,39 @@ export function InstellingenScherm() {
         <section>
           <h2>{t.instellingen.beveiliging}</h2>
           <Kaart>
-            {pincodeStap === "invoeren" ? (
+            {pincodeStap !== "uit" ? (
               <div style={{ textAlign: "center" }}>
-                <p style={{ fontWeight: 600 }}>{t.instellingen.pincodeWijzigen}</p>
+                <p style={{ fontWeight: 600 }}>{pincodeStap === "invoeren" ? t.instellingen.pincodeNieuw : t.instellingen.pincodeHerhaal}</p>
+                {pincodeFout ? <p style={{ color: "var(--kleur-fout)" }}>{t.instellingen.pincodeNietGelijk}</p> : null}
                 <Cijferpad waarde={nieuwePincode} onWijzig={pincodeBevestigen} />
-                <Knop variant="tekst" onClick={() => setPincodeStap("uit")}>{t.algemeen.annuleren}</Knop>
+                <Knop
+                  variant="tekst"
+                  onClick={() => {
+                    setPincodeStap("uit");
+                    setNieuwePincode("");
+                    setEerstePincode("");
+                    setPincodeFout(false);
+                  }}
+                >
+                  {t.algemeen.annuleren}
+                </Knop>
               </div>
             ) : (
               <div style={{ display: "flex", gap: "var(--ruimte-s)", flexWrap: "wrap" }}>
-                <Knop variant="secundair" onClick={() => setPincodeStap("invoeren")}>{t.instellingen.pincodeWijzigen}</Knop>
-                <Knop
-                  variant="secundair"
-                  onClick={async () => {
-                    if (await pincodeIsIngeschakeld()) {
-                      await schakelPincodeUit();
-                    } else {
-                      setPincodeStap("invoeren");
-                    }
-                  }}
-                >
-                  {t.instellingen.pincodeUitschakelen}
+                <Knop variant="secundair" onClick={() => setPincodeStap("invoeren")}>
+                  {pincodeAan ? t.instellingen.pincodeWijzigen : t.instellingen.pincodeInschakelen}
                 </Knop>
+                {pincodeAan ? (
+                  <Knop
+                    variant="secundair"
+                    onClick={async () => {
+                      await schakelPincodeUit();
+                      setPincodeAan(false);
+                    }}
+                  >
+                    {t.instellingen.pincodeUitschakelen}
+                  </Knop>
+                ) : null}
               </div>
             )}
           </Kaart>

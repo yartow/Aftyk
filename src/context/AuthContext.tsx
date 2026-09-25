@@ -6,6 +6,7 @@ import { nieuweId } from "../lib/id";
 import { t } from "../i18n";
 import { pincodeIsIngeschakeld, controleerPincode } from "../lib/pin";
 import { koppelLocatiesAanOrganisatie } from "../lib/locaties";
+import { zorgVoorEigenLokaleData } from "../lib/gebruikerWissel";
 import { haalOrganisatieEnProfielOp, verstuurOrganisatieEnProfiel } from "../lib/orgSync";
 import type { Organisatie, Profiel } from "../types/domain";
 
@@ -31,6 +32,9 @@ interface AuthState {
   organisatie: Organisatie | null;
   profiel: Profiel | null;
   vergrendeldDoorPincode: boolean;
+  /** Ingelogd, maar het bedrijf kon niet van de server worden geladen (offline of serverfout). */
+  accountLaadFout: boolean;
+  probeerAccountOpnieuw: () => Promise<void>;
 
   logIn: (email: string, wachtwoord: string) => Promise<{ fout?: string }>;
   /** Account aanmaken met een persoonlijke toegangscode van 5 cijfers. `bevestigMail` = eerst nog de e-mail bevestigen. */
@@ -72,25 +76,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organisatie, setOrganisatie] = useState<Organisatie | null>(null);
   const [profiel, setProfiel] = useState<Profiel | null>(null);
   const [vergrendeldDoorPincode, setVergrendeldDoorPincode] = useState(true);
+  const [accountLaadFout, setAccountLaadFout] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const heeftLokaleOrganisatie = await laadLokaleOrganisatieEnProfiel();
+      let heeftLokaleOrganisatie = false;
 
       if (supabase) {
         const { data } = await supabase.auth.getSession();
+        // Eerst zorgen dat de lokale gegevens van déze gebruiker zijn (gedeeld apparaat), dan pas laden.
+        if (data.session) await zorgVoorEigenLokaleData(data.session.user.id);
+        heeftLokaleOrganisatie = await laadLokaleOrganisatieEnProfiel();
         setSessie(data.session);
         if (data.session && !heeftLokaleOrganisatie) {
-          const opgehaald = await haalOrganisatieEnProfielOp(data.session.user.id);
-          if (opgehaald) {
-            setOrganisatie(opgehaald.organisatie);
-            setProfiel(opgehaald.profiel);
-          }
+          await laadBedrijfVanServer(data.session.user.id);
         }
 
         supabase.auth.onAuthStateChange((_gebeurtenis, nieuweSessie) => {
-          setSessie(nieuweSessie);
+          void (async () => {
+            if (nieuweSessie && (await zorgVoorEigenLokaleData(nieuweSessie.user.id))) await laadLokaleOrganisatieEnProfiel();
+            setSessie(nieuweSessie);
+          })();
         });
+      } else {
+        heeftLokaleOrganisatie = await laadLokaleOrganisatieEnProfiel();
       }
 
       const pincodeAan = await pincodeIsIngeschakeld();
@@ -104,21 +113,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function laadLokaleOrganisatieEnProfiel(): Promise<boolean> {
     const org = await db.organisaties.toCollection().first();
     const prof = await db.profielen.toCollection().first();
-    if (org) setOrganisatie(org);
-    if (prof) setProfiel(prof);
+    setOrganisatie(org ?? null);
+    setProfiel(prof ?? null);
     return !!org;
   }
+
+  /** Haalt het bedrijf op; bij een mislukte opvraag blijft de gebruiker NIET doorgestuurd naar de inrichting. */
+  async function laadBedrijfVanServer(gebruikerId: string): Promise<void> {
+    const uitkomst = await haalOrganisatieEnProfielOp(gebruikerId);
+    if (uitkomst.soort === "gevonden") {
+      setOrganisatie(uitkomst.organisatie);
+      setProfiel(uitkomst.profiel);
+    }
+    setAccountLaadFout(uitkomst.soort === "fout");
+  }
+
+  const probeerAccountOpnieuw: AuthState["probeerAccountOpnieuw"] = async () => {
+    const gebruikerId = sessie?.user.id;
+    if (gebruikerId) await laadBedrijfVanServer(gebruikerId);
+  };
 
   const logIn: AuthState["logIn"] = async (email, wachtwoord) => {
     if (!supabase) return { fout: t.sync.geenProject };
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
     if (error) return { fout: vertaalAuthFout(error.message) };
+    await zorgVoorEigenLokaleData(data.user.id);
+    await laadLokaleOrganisatieEnProfiel();
     setSessie(data.session);
-    const opgehaald = await haalOrganisatieEnProfielOp(data.user.id);
-    if (opgehaald) {
-      setOrganisatie(opgehaald.organisatie);
-      setProfiel(opgehaald.profiel);
-    }
+    await laadBedrijfVanServer(data.user.id);
     return {};
   };
 
@@ -133,6 +155,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     if (error) return { fout: vertaalAuthFout(error.message) };
     if (data.session) {
+      await zorgVoorEigenLokaleData(data.session.user.id);
+      await laadLokaleOrganisatieEnProfiel();
       setSessie(data.session);
       return {};
     }
@@ -142,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logUit: AuthState["logUit"] = async () => {
     if (supabase) await supabase.auth.signOut();
     setSessie(null);
+    setAccountLaadFout(false);
   };
 
   const verstuurResetLink: AuthState["verstuurResetLink"] = async (email) => {
@@ -208,6 +233,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     organisatie,
     profiel,
     vergrendeldDoorPincode,
+    accountLaadFout,
+    probeerAccountOpnieuw,
     logIn,
     meldAan,
     logUit,

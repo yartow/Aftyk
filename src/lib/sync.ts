@@ -33,6 +33,10 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
   if ((await haalInstelling(SLEUTEL_GEPAUZEERD)) === "true") {
     if (!handmatig) return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: t.verwijderen.gepauzeerd };
     await zetInstelling(SLEUTEL_GEPAUZEERD, "false");
+    // De online kopie is leeg (en de wachtrij gewist): zet alle lokale documenten opnieuw klaar.
+    const nu = new Date().toISOString();
+    const ids = (await db.documenten.toCollection().primaryKeys()) as string[];
+    await db.uitgaand.bulkPut(ids.map((id) => ({ id, pogingen: 0, aangemaaktOp: nu })));
   }
   if (!supabase) {
     return { gelukt: false, verstuurd: 0, fouten: 0, foutmelding: t.sync.geenProject };
@@ -54,10 +58,13 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
   // Bedrijf en profiel moeten online bestaan voordat documenten en locaties erheen kunnen
   // (relevant na een nieuwe start of nadat de online data is verwijderd).
   const profiel = await db.profielen.toCollection().first();
-  if (profiel && profiel.id === sessieData.session.user.id) await verstuurOrganisatieEnProfiel(organisatie, profiel);
-
   let verstuurd = 0;
   let fouten = 0;
+  if (profiel && profiel.id === sessieData.session.user.id) {
+    const orgFout = await verstuurOrganisatieEnProfiel(organisatie, profiel);
+    // Zonder online bedrijf en profiel weigert de server alle documenten en locaties: meld dat duidelijk.
+    if (orgFout) return { gelukt: false, verstuurd, fouten: 1, foutmelding: orgFout };
+  }
 
   // Locaties eerst: documenten verwijzen ernaar.
   try {

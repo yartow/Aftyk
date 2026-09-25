@@ -17,7 +17,7 @@ export function PeriodeKiezer({ titel, ondertitel, onVorige, onVolgende, onNu, n
       <button type="button" className="periode-knop" onClick={onVorige} aria-label={t.algemeen.vorige}>
         ‹
       </button>
-      <button type="button" className="periode-midden" onClick={onNu} title={nuLabel}>
+      <button type="button" className="periode-midden" onClick={onNu} title={nuLabel} aria-label={`${nuLabel}: ${titel}`}>
         <strong>{titel}</strong>
         {ondertitel ? <span className="tekst-zwak">{ondertitel}</span> : null}
       </button>

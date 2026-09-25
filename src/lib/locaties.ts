@@ -50,7 +50,8 @@ export async function koppelLocatiesAanOrganisatie(organisatie: Organisatie): Pr
       return;
     }
     for (const locatie of bestaand) {
-      if (locatie.organisatieId === organisatie.id) continue;
+      // Locaties van een ander bedrijf nooit overnemen; alleen die zonder bedrijf.
+      if (locatie.organisatieId) continue;
       const zonderAdres = !locatie.adres && !locatie.postcode && !locatie.plaats;
       await db.locaties.put({
         ...locatie,

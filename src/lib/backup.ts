@@ -49,9 +49,19 @@ export async function herstelBackupBestand(bestand: File): Promise<{ aantalDocum
   }
 
   await db.transaction("rw", [db.organisaties, db.profielen, db.locaties, db.documenten, db.uitgaand], async () => {
-    if (data.organisaties?.length) await db.organisaties.bulkPut(data.organisaties);
-    if (data.profielen?.length) await db.profielen.bulkPut(data.profielen);
-    if (data.locaties?.length) await db.locaties.bulkPut(data.locaties);
+    // Net als bij documenten wint de meest recent bewerkte versie.
+    for (const organisatie of data.organisaties ?? []) {
+      const lokaal = await db.organisaties.get(organisatie.id);
+      if (!lokaal || (lokaal.bijgewerktOp ?? "") < (organisatie.bijgewerktOp ?? "")) await db.organisaties.put(organisatie);
+    }
+    // Profielen hebben geen tijdstempel: alleen toevoegen wat er lokaal nog niet is.
+    for (const profiel of data.profielen ?? []) {
+      if (!(await db.profielen.get(profiel.id))) await db.profielen.put(profiel);
+    }
+    for (const locatie of data.locaties ?? []) {
+      const lokaal = await db.locaties.get(locatie.id);
+      if (!lokaal || lokaal.bijgewerktOp < locatie.bijgewerktOp) await db.locaties.put(locatie);
+    }
     // Back-ups van vóór de locaties bevatten documenten zonder locatie: die horen bij de eerste locatie.
     const terugvalLocatie = (await db.locaties.toCollection().first())?.id;
     for (const origineel of data.documenten) {

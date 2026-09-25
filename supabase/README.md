@@ -26,6 +26,8 @@ er wifi is. Deze stappen hoef je maar één keer te doen.
 
    > Deze migratie is geschreven en op syntax gecontroleerd, maar nog **niet** uitgevoerd tegen een echte of lokale database. Draai hem eerst lokaal (hoofdstuk 6) of op een testproject en controleer de stappen onder "Testen" in hoofdstuk 3b.
 
+5. Plak daarna [`migrations/0004_profiel_policy_herstel.sql`](./migrations/0004_profiel_policy_herstel.sql) en klik **Run**. Dit herstelt een fout in de beveiligingsregel voor het aanmaken van een profiel (0001 controleerde niet of de organisatie al een profiel had). Ook nog niet tegen een echte database uitgevoerd.
+
 ## 3. Authenticatie
 
 1. **Authentication → Providers**: e-mail/wachtwoord staat standaard aan, dat is voldoende.
@@ -55,7 +57,7 @@ e-mailadres bestaat al), dan wordt de code niet verbruikt.
 
 **Goed om te weten**
 - Vijf cijfers zijn 100.000 mogelijkheden: gokken is in theorie mogelijk. De aanmeldlimieten van Supabase Auth remmen dat, maar houd daarom niet veel ongebruikte codes tegelijk open en verwijder ongebruikte codes die je niet meer nodig hebt (`delete from toegangscodes where gebruikt_door is null and code = '12345';`).
-- De trigger geldt voor **alle** nieuwe gebruikers. Een gebruiker handmatig aanmaken in het dashboard ("Add user") lukt alleen als je er `{"toegangscode": "<code>"}` als *user metadata* bij geeft, of als je de trigger tijdelijk uitzet: `alter table auth.users disable trigger toegangscode_bij_aanmelding;` (en daarna weer `enable`).
+- De trigger geldt voor **alle** nieuwe gebruikers. Een gebruiker die je zelf aanmaakt (admin-API, script, seed) slaat de controle over met `{"toegangscode_niet_nodig": true}` in de **app_metadata**. Bezoekers kunnen app_metadata bij een gewone aanmelding niet instellen, dus dit is niet te omzeilen. Het dashboard-formulier "Add user" kan alleen user metadata zetten: geef daar `{"toegangscode": "<code>"}` mee. Zet de trigger liever niet uit; vergeet je hem weer aan te zetten, dan staat aanmelden open.
 - Bestaande accounts zijn niet beïnvloed.
 
 **Testen** (nog niet gedaan, zie `TODO.md`):
@@ -63,6 +65,7 @@ e-mailadres bestaat al), dan wordt de code niet verbruikt.
 2. Dezelfde code nogmaals → foutmelding "Ongeldige of al gebruikte toegangscode".
 3. Een verzonnen code → dezelfde foutmelding.
 4. Twee aanmeldingen tegelijk met dezelfde code → precies één slaagt.
+5. Gebruiker aanmaken via de admin-API met `app_metadata` `{"toegangscode_niet_nodig": true}` → lukt; met dezelfde waarde alleen in *user* metadata → faalt.
 
 ## 3c. Online gegevens verwijderen
 
@@ -117,16 +120,16 @@ backend (Postgres, Auth, Studio, …) lokaal in Docker.
    ```bash
    supabase init      # eenmalig, als supabase/config.toml nog niet bestaat
    supabase start     # start de containers (eerste keer duurt dit even, images worden gedownload)
-   supabase db reset  # past de migraties toe (0001 t/m 0003)
+   supabase db reset  # past de migraties toe (0001 t/m 0004)
    ```
 4. Kopieer [`../.env.local-supabase.example`](../.env.local-supabase.example)
    naar `.env` in de projectroot — de sleutels daarin zijn de vaste,
    publiek bekende standaardwaarden die de CLI voor elk lokaal project
    genereert, dus geen eigen sleutels nodig.
 5. `npm run dev` en gebruik de app zoals normaal. Er is geen account
-   vooraf aangemaakt — gebruik Supabase Studio (`http://127.0.0.1:54323`,
-   **Authentication**) om er handmatig een aan te maken, of maak er een
-   via de admin-API (zie GoTrue-documentatie).
+   vooraf aangemaakt — meld je aan in de app met een code uit
+   `select maak_toegangscode();`, of maak er een via de admin-API met
+   `app_metadata` `{"toegangscode_niet_nodig": true}` (zie hierboven).
 6. `supabase stop` sluit de containers weer af. `supabase db reset` zet
    alles terug naar de staat direct na de migraties.
 

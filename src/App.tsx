@@ -17,6 +17,8 @@ import { LeveranciersScherm } from "./screens/Leveranciers/LeveranciersScherm";
 import { LeverancierslijstScherm } from "./screens/Leveranciers/LeverancierslijstScherm";
 import { InstellingenScherm } from "./screens/Instellingen/InstellingenScherm";
 import { inrichtingIsOvergeslagen } from "./lib/inrichting";
+import { Knop } from "./components/Knop";
+import { t } from "./i18n";
 import { DemoBanner } from "./components/DemoBanner";
 import { BijwerkMelding } from "./components/BijwerkMelding";
 
@@ -30,7 +32,7 @@ import { BijwerkMelding } from "./components/BijwerkMelding";
  * 5. verder → de eigenlijke app
  */
 function Poortwachter({ children }: { children: ReactNode }) {
-  const { klaar, modus, sessie, organisatie, vergrendeldDoorPincode } = useAuth();
+  const { klaar, modus, sessie, organisatie, vergrendeldDoorPincode, accountLaadFout, probeerAccountOpnieuw, logUit } = useAuth();
   const { klaar: instellingenKlaar } = useInstellingen();
   const locatie = useLocation();
 
@@ -41,6 +43,25 @@ function Poortwachter({ children }: { children: ReactNode }) {
   if (modus === "supabase" && !sessie) {
     if (["/inloggen", "/wachtwoord-vergeten", "/aanmelden"].includes(locatie.pathname)) return <>{children}</>;
     return <Navigate to="/inloggen" replace />;
+  }
+
+  // Ingelogd maar het bedrijf kon niet worden geladen: niet naar de inrichting sturen,
+  // anders ontstaat er een tweede bedrijf naast het bestaande.
+  if (modus === "supabase" && sessie && !organisatie && accountLaadFout) {
+    return (
+      <div className="app-scherm">
+        <div className="app-inhoud" style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: "var(--ruimte-m)", flex: 1, maxWidth: "24rem", margin: "0 auto" }}>
+          <h1>{t.auth.accountLadenMislukt}</h1>
+          <p className="tekst-zwak">{t.auth.accountLadenUitleg}</p>
+          <Knop volledigeBreedte onClick={() => void probeerAccountOpnieuw()}>
+            {t.auth.opnieuwProberen}
+          </Knop>
+          <Knop variant="secundair" volledigeBreedte onClick={() => void logUit()}>
+            {t.instellingen.uitloggen}
+          </Knop>
+        </div>
+      </div>
+    );
   }
 
   if (!organisatie && !inrichtingIsOvergeslagen()) {

@@ -36,6 +36,8 @@ export const en: Vertaling = {
     subtitel: "Ask the owner if you don't know the code.",
     fout: "Wrong PIN, please try again.",
     vergeten: "Forgot your PIN? Log in with your password.",
+    vergetenLokaal: "Forgot your PIN? Erase the data on this device.",
+    wisBevestiging: "All data, settings and the PIN will be erased from this device and cannot be recovered (unless you have a backup). Continue?",
     wissen: "Delete",
   },
 
@@ -264,6 +266,9 @@ export const en: Vertaling = {
     pincodeWijzigen: "Change PIN",
     pincodeUitschakelen: "Turn off PIN",
     pincodeInschakelen: "Turn on PIN",
+    pincodeNieuw: "Choose a new PIN",
+    pincodeHerhaal: "Enter the PIN once more",
+    pincodeNietGelijk: "The two PINs did not match. Start again.",
     synchronisatie: "Synchronisation",
     nuSynchroniseren: "Sync now",
     bezigMetSynchroniseren: "Syncing…",
@@ -375,6 +380,9 @@ export const en: Vertaling = {
 
   auth: {
     inloggenTitel: "Log in",
+    accountLadenMislukt: "Your data could not be loaded",
+    accountLadenUitleg: "Check your internet connection and try again. Do not enter the company details again: your company is already online.",
+    opnieuwProberen: "Try again",
     email: "Email address",
     wachtwoord: "Password",
     inloggen: "Log in",

@@ -72,10 +72,10 @@ export class HygienecodeDatabase extends Dexie {
           const nieuwId = `${document.soort}:${locatieId}:${document.sleutel}`;
           await documenten.delete(oudId);
           await documenten.put({ ...document, id: nieuwId, locatieId });
-          if (await uitgaand.get(oudId)) {
-            await uitgaand.delete(oudId);
-            await uitgaand.put({ id: nieuwId, pogingen: 0, aangemaaktOp: nu });
-          }
+          // Alles opnieuw in de wachtrij: ook al gesynchroniseerde documenten staan online
+          // nog onder het oude id (zonder locatie) en moeten onder het nieuwe id worden geüpload.
+          await uitgaand.delete(oudId);
+          await uitgaand.put({ id: nieuwId, pogingen: 0, aangemaaktOp: nu });
         }
       });
   }

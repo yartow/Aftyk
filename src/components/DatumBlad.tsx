@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { bouwMaandRooster, weekdagen } from "../lib/kalender";
 import { werkdatumVan } from "../lib/format";
-import { formatteerDatumKort, t } from "../i18n";
+import { formatteerDatumKort, formatteerDatumLang, t } from "../i18n";
 import { Blad } from "./Blad";
 import "./DatumKiezer.css";
 import "./DatumBlad.css";
@@ -52,7 +52,7 @@ export function DatumBlad({ waarde, onWijzig, leegLabel, titel, className }: Dat
           <button type="button" className="datumkiezer-navknop" onClick={() => verschuif(-1)} aria-label={t.algemeen.vorigeMaand}>
             ‹
           </button>
-          <span className="datumkiezer-maandlabel">{rooster.label}</span>
+          <span className="datumkiezer-maandlabel" aria-live="polite">{rooster.label}</span>
           <button type="button" className="datumkiezer-navknop" onClick={() => verschuif(1)} aria-label={t.algemeen.volgendeMaand}>
             ›
           </button>
@@ -70,6 +70,8 @@ export function DatumBlad({ waarde, onWijzig, leegLabel, titel, className }: Dat
                   key={j}
                   type="button"
                   className={`datumkiezer-dag ${dag === waarde ? "datumkiezer-dag--geselecteerd" : ""} ${dag === vandaag ? "datumblad-vandaag" : ""}`}
+                  aria-label={formatteerDatumLang(new Date(`${dag}T00:00:00`))}
+                  aria-pressed={dag === waarde}
                   onClick={() => {
                     onWijzig(dag);
                     setOpen(false);

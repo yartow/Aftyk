@@ -242,6 +242,6 @@ src/
                  Inrichting (company details), Pincode
   assets/        Shop logo (PDF header only — app/tab icons live in public/)
 supabase/
-  migrations/    0001 base schema + RLS, 0002 `documenten`, 0003 locations + postal address + access codes + `verwijder_online_data()`
+  migrations/    0001 base schema + RLS, 0002 `documenten`, 0003 locations + postal address + access codes + `verwijder_online_data()`, 0004 fix for the profile-insert policy
   README.md      Step-by-step Supabase + Resend (password reset) setup
 ```

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { bouwMaandRooster, weekdagen } from "../lib/kalender";
 import { formatteerDatumLang, t } from "../i18n";
 import "./DatumKiezer.css";
@@ -17,8 +17,11 @@ interface DatumKiezerProps {
  * schalen mee met --raakdoel-min zoals de rest van de app.
  */
 export function DatumKiezer({ label, waarde, max, onWijzig }: DatumKiezerProps) {
+  const knopId = useId();
   const [open, setOpen] = useState(false);
-  const [jaar, maand] = waarde.split("-").map(Number);
+  // Een lege of ongeldige waarde valt terug op de maand van de bovengrens.
+  const geldig = /^\d{4}-\d{2}-\d{2}$/.test(waarde);
+  const [jaar, maand] = (geldig ? waarde : max).split("-").map(Number);
   const [weergaveJaar, setWeergaveJaar] = useState(jaar);
   const [weergaveMaand, setWeergaveMaand] = useState(maand - 1);
 
@@ -28,7 +31,7 @@ export function DatumKiezer({ label, waarde, max, onWijzig }: DatumKiezerProps) 
 
   function openKlap() {
     if (!open) {
-      const [j, m] = waarde.split("-").map(Number);
+      const [j, m] = (geldig ? waarde : max).split("-").map(Number);
       setWeergaveJaar(j);
       setWeergaveMaand(m - 1);
     }
@@ -58,17 +61,17 @@ export function DatumKiezer({ label, waarde, max, onWijzig }: DatumKiezerProps) 
 
   return (
     <div className="datumkiezer">
-      <label className="invoerveld-label" htmlFor="datumkiezer-knop">
+      <label className="invoerveld-label" htmlFor={knopId}>
         {label}
       </label>
       <button
-        id="datumkiezer-knop"
+        id={knopId}
         type="button"
         className="invoerveld-input datumkiezer-trigger"
         onClick={openKlap}
         aria-expanded={open}
       >
-        <span>{formatteerDatumLang(new Date(`${waarde}T00:00:00`))}</span>
+        <span>{geldig ? formatteerDatumLang(new Date(`${waarde}T00:00:00`)) : ""}</span>
         <span aria-hidden="true" className="datumkiezer-pictogram">📅</span>
       </button>
 
@@ -78,7 +81,7 @@ export function DatumKiezer({ label, waarde, max, onWijzig }: DatumKiezerProps) 
             <button type="button" className="datumkiezer-navknop" onClick={vorigeMaand} aria-label={t.algemeen.vorigeMaand}>
               ‹
             </button>
-            <span className="datumkiezer-maandlabel">{rooster.label}</span>
+            <span className="datumkiezer-maandlabel" aria-live="polite">{rooster.label}</span>
             <button
               type="button"
               className="datumkiezer-navknop"
@@ -107,6 +110,8 @@ export function DatumKiezer({ label, waarde, max, onWijzig }: DatumKiezerProps) 
                     type="button"
                     className={`datumkiezer-dag ${isGeselecteerd ? "datumkiezer-dag--geselecteerd" : ""}`}
                     disabled={buitenBereik}
+                    aria-label={formatteerDatumLang(new Date(`${werkdatum}T00:00:00`))}
+                    aria-pressed={isGeselecteerd}
                     onClick={() => {
                       onWijzig(werkdatum);
                       setOpen(false);

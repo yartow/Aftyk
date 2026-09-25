@@ -38,6 +38,8 @@ export const nl = {
     subtitel: "Vraag de eigenaar als je de code niet weet.",
     fout: "Onjuiste pincode, probeer opnieuw.",
     vergeten: "Pincode vergeten? Log in met wachtwoord.",
+    vergetenLokaal: "Pincode vergeten? Wis de gegevens op dit apparaat.",
+    wisBevestiging: "Alle gegevens, instellingen en de pincode worden van dit apparaat gewist en kunnen niet worden hersteld (tenzij u een back-up heeft). Doorgaan?",
     wissen: "Wissen",
   },
 
@@ -266,6 +268,9 @@ export const nl = {
     pincodeWijzigen: "Pincode wijzigen",
     pincodeUitschakelen: "Pincode uitschakelen",
     pincodeInschakelen: "Pincode inschakelen",
+    pincodeNieuw: "Kies een nieuwe pincode",
+    pincodeHerhaal: "Voer de pincode nog een keer in",
+    pincodeNietGelijk: "De twee pincodes waren niet gelijk. Begin opnieuw.",
     synchronisatie: "Synchronisatie",
     nuSynchroniseren: "Nu synchroniseren",
     bezigMetSynchroniseren: "Bezig met synchroniseren…",
@@ -377,6 +382,9 @@ export const nl = {
 
   auth: {
     inloggenTitel: "Inloggen",
+    accountLadenMislukt: "Uw gegevens konden niet worden geladen",
+    accountLadenUitleg: "Controleer uw internetverbinding en probeer het opnieuw. Vul de bedrijfsgegevens niet opnieuw in: uw bedrijf staat al online.",
+    opnieuwProberen: "Opnieuw proberen",
     email: "E-mailadres",
     wachtwoord: "Wachtwoord",
     inloggen: "Inloggen",
