@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Invoerveld } from "../../components/Invoerveld";
 import { Knop } from "../../components/Knop";
 import { useAuth } from "../../context/AuthContext";
-import { t } from "../../i18n/nl";
+import { t } from "../../i18n";
 
 /**
  * Landingspagina van de reset-link uit de e-mail (Supabase zet de

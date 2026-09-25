@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { t } from "../i18n/nl";
+import { t } from "../i18n";
 
 export function AppKop({ titel, terugNaar, actie }: { titel: string; terugNaar?: string; actie?: ReactNode }) {
   const navigate = useNavigate();

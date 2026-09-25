@@ -1,5 +1,5 @@
 import "./Cijferpad.css";
-import { t } from "../i18n/nl";
+import { t } from "../i18n";
 
 interface CijferpadProps {
   waarde: string;

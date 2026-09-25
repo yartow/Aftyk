@@ -1,13 +1,16 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { haalInstelling, zetInstelling } from "../db/db";
+import { huidigeTaal, zetTaal as zetTaalInModule, type Taal } from "../i18n";
 import type { Tekstgrootte, Thema } from "../types/domain";
 
 interface InstellingenState {
   tekstgrootte: Tekstgrootte;
   thema: Thema;
+  taal: Taal;
   klaar: boolean;
   zetTekstgrootte: (waarde: Tekstgrootte) => void;
   zetThema: (waarde: Thema) => void;
+  zetTaal: (waarde: Taal) => void;
 }
 
 const InstellingenContext = createContext<InstellingenState | null>(null);
@@ -24,6 +27,7 @@ const SLEUTEL_THEMA = "thema";
 export function InstellingenProvider({ children }: { children: ReactNode }) {
   const [tekstgrootte, setTekstgrootteState] = useState<Tekstgrootte>("normaal");
   const [thema, setThemaState] = useState<Thema>("systeem");
+  const [taal, setTaalState] = useState<Taal>(huidigeTaal());
   const [klaar, setKlaar] = useState(false);
 
   useEffect(() => {
@@ -58,8 +62,13 @@ export function InstellingenProvider({ children }: { children: ReactNode }) {
     void zetInstelling(SLEUTEL_THEMA, waarde);
   };
 
+  const zetTaal = (waarde: Taal) => {
+    zetTaalInModule(waarde);
+    setTaalState(waarde);
+  };
+
   return (
-    <InstellingenContext.Provider value={{ tekstgrootte, thema, klaar, zetTekstgrootte, zetThema }}>
+    <InstellingenContext.Provider value={{ tekstgrootte, thema, taal, klaar, zetTekstgrootte, zetThema, zetTaal }}>
       {children}
     </InstellingenContext.Provider>
   );

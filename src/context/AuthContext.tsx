@@ -3,7 +3,10 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase, supabaseIsGeconfigureerd } from "../lib/supabase";
 import { db } from "../db/db";
 import { nieuweId } from "../lib/id";
+import { t } from "../i18n";
 import { pincodeIsIngeschakeld, controleerPincode } from "../lib/pin";
+import { koppelLocatiesAanOrganisatie } from "../lib/locaties";
+import { zorgVoorEigenLokaleData } from "../lib/gebruikerWissel";
 import { haalOrganisatieEnProfielOp, verstuurOrganisatieEnProfiel } from "../lib/orgSync";
 import type { Organisatie, Profiel } from "../types/domain";
 
@@ -16,6 +19,9 @@ interface BedrijfsgegevensInvoer {
   contactpersoon: string;
   telefoon: string;
   email: string;
+  postAdres: string;
+  postPostcode: string;
+  postPlaats: string;
 }
 
 interface AuthState {
@@ -26,9 +32,13 @@ interface AuthState {
   organisatie: Organisatie | null;
   profiel: Profiel | null;
   vergrendeldDoorPincode: boolean;
+  /** Ingelogd, maar het bedrijf kon niet van de server worden geladen (offline of serverfout). */
+  accountLaadFout: boolean;
+  probeerAccountOpnieuw: () => Promise<void>;
 
   logIn: (email: string, wachtwoord: string) => Promise<{ fout?: string }>;
-  meldAan: (email: string, wachtwoord: string) => Promise<{ fout?: string }>;
+  /** Account aanmaken met een persoonlijke toegangscode van 5 cijfers. `bevestigMail` = eerst nog de e-mail bevestigen. */
+  meldAan: (email: string, wachtwoord: string, toegangscode: string) => Promise<{ fout?: string; bevestigMail?: boolean }>;
   logUit: () => Promise<void>;
   verstuurResetLink: (email: string) => Promise<{ fout?: string }>;
   stelNieuwWachtwoordIn: (nieuwWachtwoord: string) => Promise<{ fout?: string }>;
@@ -45,6 +55,15 @@ interface AuthState {
 const AuthContext = createContext<AuthState | null>(null);
 
 /**
+ * De map waar de app draait (bijv. https://andrew-yong.com/aftyk/), zonder hash.
+ * Bewust niet alleen `origin`: de app kan in een submap staan (base: "./").
+ * Supabase negeert deze URL als hij niet op de lijst Redirect URLs staat.
+ */
+function appBasisUrl(): string {
+  return new URL(".", window.location.href.split("#")[0]).href;
+}
+
+/**
  * Regelt zowel de Supabase-sessie (account/wachtwoord — beveiligt het
  * archief) als de lokale pincode-vergrendeling (gemak-slot voor dagelijks
  * gebruik op het tablet). In "lokale modus" (geen Supabase gekoppeld, zie
@@ -57,25 +76,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organisatie, setOrganisatie] = useState<Organisatie | null>(null);
   const [profiel, setProfiel] = useState<Profiel | null>(null);
   const [vergrendeldDoorPincode, setVergrendeldDoorPincode] = useState(true);
+  const [accountLaadFout, setAccountLaadFout] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const heeftLokaleOrganisatie = await laadLokaleOrganisatieEnProfiel();
+      let heeftLokaleOrganisatie = false;
 
       if (supabase) {
         const { data } = await supabase.auth.getSession();
+        // Eerst zorgen dat de lokale gegevens van déze gebruiker zijn (gedeeld apparaat), dan pas laden.
+        if (data.session) await zorgVoorEigenLokaleData(data.session.user.id);
+        heeftLokaleOrganisatie = await laadLokaleOrganisatieEnProfiel();
         setSessie(data.session);
         if (data.session && !heeftLokaleOrganisatie) {
-          const opgehaald = await haalOrganisatieEnProfielOp(data.session.user.id);
-          if (opgehaald) {
-            setOrganisatie(opgehaald.organisatie);
-            setProfiel(opgehaald.profiel);
-          }
+          await laadBedrijfVanServer(data.session.user.id);
         }
 
         supabase.auth.onAuthStateChange((_gebeurtenis, nieuweSessie) => {
-          setSessie(nieuweSessie);
+          void (async () => {
+            if (nieuweSessie && (await zorgVoorEigenLokaleData(nieuweSessie.user.id))) await laadLokaleOrganisatieEnProfiel();
+            setSessie(nieuweSessie);
+          })();
         });
+      } else {
+        heeftLokaleOrganisatie = await laadLokaleOrganisatieEnProfiel();
       }
 
       const pincodeAan = await pincodeIsIngeschakeld();
@@ -89,50 +113,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function laadLokaleOrganisatieEnProfiel(): Promise<boolean> {
     const org = await db.organisaties.toCollection().first();
     const prof = await db.profielen.toCollection().first();
-    if (org) setOrganisatie(org);
-    if (prof) setProfiel(prof);
+    setOrganisatie(org ?? null);
+    setProfiel(prof ?? null);
     return !!org;
   }
 
+  /** Haalt het bedrijf op; bij een mislukte opvraag blijft de gebruiker NIET doorgestuurd naar de inrichting. */
+  async function laadBedrijfVanServer(gebruikerId: string): Promise<void> {
+    const uitkomst = await haalOrganisatieEnProfielOp(gebruikerId);
+    if (uitkomst.soort === "gevonden") {
+      setOrganisatie(uitkomst.organisatie);
+      setProfiel(uitkomst.profiel);
+    }
+    setAccountLaadFout(uitkomst.soort === "fout");
+  }
+
+  const probeerAccountOpnieuw: AuthState["probeerAccountOpnieuw"] = async () => {
+    const gebruikerId = sessie?.user.id;
+    if (gebruikerId) await laadBedrijfVanServer(gebruikerId);
+  };
+
   const logIn: AuthState["logIn"] = async (email, wachtwoord) => {
-    if (!supabase) return { fout: "Geen Supabase-project gekoppeld." };
+    if (!supabase) return { fout: t.sync.geenProject };
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
     if (error) return { fout: vertaalAuthFout(error.message) };
+    await zorgVoorEigenLokaleData(data.user.id);
+    await laadLokaleOrganisatieEnProfiel();
     setSessie(data.session);
-    const opgehaald = await haalOrganisatieEnProfielOp(data.user.id);
-    if (opgehaald) {
-      setOrganisatie(opgehaald.organisatie);
-      setProfiel(opgehaald.profiel);
-    }
+    await laadBedrijfVanServer(data.user.id);
     return {};
   };
 
-  const meldAan: AuthState["meldAan"] = async (email, wachtwoord) => {
-    if (!supabase) return { fout: "Geen Supabase-project gekoppeld." };
-    const { data, error } = await supabase.auth.signUp({ email, password: wachtwoord });
+  const meldAan: AuthState["meldAan"] = async (email, wachtwoord, toegangscode) => {
+    if (!supabase) return { fout: t.sync.geenProject };
+    // De code gaat mee als gebruikersgegeven; een database-trigger op auth.users controleert
+    // en "verbruikt" hem in één stap (zie supabase/migrations/0003), zodat hij maar één keer werkt.
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password: wachtwoord,
+      options: { data: { toegangscode }, emailRedirectTo: appBasisUrl() },
+    });
     if (error) return { fout: vertaalAuthFout(error.message) };
-    if (data.session) setSessie(data.session);
-    return {};
+    if (data.session) {
+      await zorgVoorEigenLokaleData(data.session.user.id);
+      await laadLokaleOrganisatieEnProfiel();
+      setSessie(data.session);
+      return {};
+    }
+    return { bevestigMail: true };
   };
 
   const logUit: AuthState["logUit"] = async () => {
     if (supabase) await supabase.auth.signOut();
     setSessie(null);
+    setAccountLaadFout(false);
   };
 
   const verstuurResetLink: AuthState["verstuurResetLink"] = async (email) => {
-    if (!supabase) return { fout: "Geen Supabase-project gekoppeld." };
+    if (!supabase) return { fout: t.sync.geenProject };
     // HashRouter (zie App.tsx) — zo werkt de link zonder serverconfiguratie
     // voor client-side routing, wat op standaard cPanel-hosting niet vanzelf werkt.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/#/nieuw-wachtwoord`,
+      redirectTo: `${appBasisUrl()}#/nieuw-wachtwoord`,
     });
     if (error) return { fout: vertaalAuthFout(error.message) };
     return {};
   };
 
   const stelNieuwWachtwoordIn: AuthState["stelNieuwWachtwoordIn"] = async (nieuwWachtwoord) => {
-    if (!supabase) return { fout: "Geen Supabase-project gekoppeld." };
+    if (!supabase) return { fout: t.sync.geenProject };
     const { error } = await supabase.auth.updateUser({ password: nieuwWachtwoord });
     if (error) return { fout: vertaalAuthFout(error.message) };
     return {};
@@ -154,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     await db.organisaties.put(nieuweOrganisatie);
     await db.profielen.put(nieuwProfiel);
+    await koppelLocatiesAanOrganisatie(nieuweOrganisatie);
     setOrganisatie(nieuweOrganisatie);
     setProfiel(nieuwProfiel);
     await verstuurOrganisatieEnProfiel(nieuweOrganisatie, nieuwProfiel);
@@ -183,6 +233,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     organisatie,
     profiel,
     vergrendeldDoorPincode,
+    accountLaadFout,
+    probeerAccountOpnieuw,
     logIn,
     meldAan,
     logUit,
@@ -205,8 +257,9 @@ export function useAuth(): AuthState {
 }
 
 function vertaalAuthFout(bericht: string): string {
-  if (/invalid login credentials/i.test(bericht)) return "E-mailadres of wachtwoord onjuist.";
-  if (/already registered/i.test(bericht)) return "Dit e-mailadres heeft al een account.";
-  if (/password/i.test(bericht) && /short|weak/i.test(bericht)) return "Wachtwoord is te kort (minimaal 6 tekens).";
+  if (/invalid login credentials/i.test(bericht)) return t.auth.onjuist;
+  if (/already registered/i.test(bericht)) return t.auth.alBestaand;
+  if (/database error saving new user|toegangscode/i.test(bericht)) return t.auth.ongeldigeCode;
+  if (/password/i.test(bericht) && /short|weak/i.test(bericht)) return t.auth.tekort;
   return bericht;
 }

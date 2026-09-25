@@ -1,0 +1,30 @@
+.uitklap {
+  background: var(--kleur-oppervlak);
+  border: 0.0625rem solid var(--kleur-rand);
+  border-radius: var(--radius);
+  margin-bottom: var(--ruimte-m);
+}
+
+.uitklap-kop {
+  width: 100%;
+  min-height: var(--raakdoel-min);
+  display: flex;
+  align-items: center;
+  gap: var(--ruimte-s);
+  padding: 0.5rem var(--ruimte-m);
+  border: 0;
+  background: transparent;
+  font-size: 1.0625rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.uitklap-titel { flex: 1; font-weight: 700; }
+
+.uitklap-inhoud {
+  padding: var(--ruimte-m);
+  border-top: 0.0625rem solid var(--kleur-rand);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ruimte-m);
+}

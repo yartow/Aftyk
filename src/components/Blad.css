@@ -1,0 +1,45 @@
+.blad-achtergrond {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.blad {
+  width: 100%;
+  max-width: 34rem;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--kleur-oppervlak);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: var(--ruimte-m);
+  padding-bottom: calc(var(--ruimte-l) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--ruimte-m);
+}
+
+@media (min-width: 40rem) {
+  .blad-achtergrond { align-items: center; }
+  .blad { border-radius: var(--radius); }
+}
+
+.blad-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ruimte-s);
+}
+.blad-kop h2 { margin: 0; font-size: 1.2rem; }
+
+.blad-sluit {
+  min-width: 3rem;
+  min-height: 3rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.25rem;
+  cursor: pointer;
+}

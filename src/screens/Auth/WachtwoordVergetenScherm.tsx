@@ -3,7 +3,7 @@ import { AppKop } from "../../components/AppKop";
 import { Invoerveld } from "../../components/Invoerveld";
 import { Knop } from "../../components/Knop";
 import { useAuth } from "../../context/AuthContext";
-import { t } from "../../i18n/nl";
+import { t } from "../../i18n";
 
 export function WachtwoordVergetenScherm() {
   const { verstuurResetLink } = useAuth();

@@ -1,5 +1,5 @@
 import "./Selectievakje.css";
-import { t } from "../i18n/nl";
+import { t } from "../i18n";
 
 interface SelectievakjeProps {
   gedaan: boolean;

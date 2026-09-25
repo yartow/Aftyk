@@ -1,0 +1,105 @@
+.datumkiezer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+.datumkiezer-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ruimte-s);
+  cursor: pointer;
+  text-align: left;
+  text-transform: capitalize;
+}
+
+.datumkiezer-pictogram {
+  font-size: 1.25rem;
+}
+
+.datumkiezer-paneel {
+  border: 0.125rem solid var(--kleur-rand);
+  border-radius: var(--radius);
+  background: var(--kleur-oppervlak);
+  padding: var(--ruimte-m);
+}
+
+.datumkiezer-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ruimte-s);
+  margin-bottom: var(--ruimte-s);
+}
+
+.datumkiezer-navknop {
+  min-width: var(--raakdoel-min);
+  min-height: var(--raakdoel-min);
+  border-radius: var(--radius);
+  border: 0.125rem solid var(--kleur-rand);
+  background: var(--kleur-oppervlak);
+  color: var(--kleur-tekst);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.datumkiezer-navknop:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.datumkiezer-maandlabel {
+  font-weight: 600;
+  text-transform: capitalize;
+  text-align: center;
+  flex: 1;
+}
+
+.datumkiezer-weekdagen {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--kleur-tekst-zwak);
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.datumkiezer-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.datumkiezer-dag {
+  min-height: var(--raakdoel-min);
+  border-radius: var(--radius);
+  border: 0.125rem solid var(--kleur-rand);
+  background: var(--kleur-oppervlak);
+  color: var(--kleur-tekst);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.datumkiezer-dag--leeg {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.datumkiezer-dag--geselecteerd {
+  background: var(--kleur-primair);
+  border-color: var(--kleur-primair);
+  color: var(--kleur-primair-tekst);
+}
+
+.datumkiezer-dag:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}

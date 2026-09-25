@@ -1,0 +1,123 @@
+.sp-tabelwrap { overflow-x: auto; }
+
+.sp-tabel {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--kleur-oppervlak);
+}
+
+.sp-tabel th, .sp-tabel td {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 0.0625rem solid var(--kleur-rand);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.sp-tabel th {
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--kleur-tekst-zwak);
+  background: var(--kleur-achtergrond);
+}
+
+.sp-object { font-weight: 700; }
+
+/* Kolom wordt automatisch smal zodra er alleen nog een afkorting in staat. */
+.sp-kol-freq { width: 1%; white-space: nowrap; }
+
+.sp-methode { white-space: pre-line; font-size: 0.9375rem; }
+
+.sp-celknop {
+  min-height: var(--raakdoel-min);
+  min-width: 3.5rem;
+  padding: 0.25rem 0.75rem;
+  border: 0.125rem dashed var(--kleur-rand);
+  border-radius: var(--radius);
+  background: var(--kleur-oppervlak);
+  color: var(--kleur-tekst-zwak);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sp-celknop--gevuld {
+  border-style: solid;
+  color: var(--kleur-tekst);
+  text-align: center;
+}
+
+.sp-freqchip { font-size: 1.25rem; font-weight: 800; min-width: 3.5rem; }
+
+.sp-dagen { display: flex; gap: 0.375rem; }
+
+/* Niet uitgevoerd: grijs, donkergrijze tekst, 70% dekking. Uitgevoerd: groen, 100%. */
+.sp-dag {
+  flex: 1 1 0;
+  min-width: 2.75rem;
+  min-height: var(--raakdoel-min);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--kleur-blok-uit);
+  color: var(--kleur-blok-uit-tekst);
+  opacity: 0.7;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.1s ease, opacity 0.1s ease;
+}
+
+.sp-dag--gedaan {
+  background: var(--kleur-uitgevoerd);
+  color: var(--kleur-uitgevoerd-tekst);
+  opacity: 1;
+}
+
+.sp-dag:disabled { cursor: not-allowed; opacity: 0.35; }
+.sp-dag-vink { font-size: 1.125rem; line-height: 1; min-height: 1.125rem; }
+
+.sp-hint { color: var(--kleur-tekst-zwak); font-style: italic; }
+
+/* Legenda */
+.sp-legenda { margin-bottom: var(--ruimte-m); display: flex; flex-direction: column; gap: var(--ruimte-m); }
+.sp-legenda-tabel { width: 100%; border-collapse: collapse; }
+.sp-legenda-tabel th, .sp-legenda-tabel td { padding: 0.375rem; text-align: left; }
+.sp-legenda-tabel th { font-size: 0.8125rem; color: var(--kleur-tekst-zwak); }
+.sp-legenda-tabel input { width: 100%; min-width: 7rem; }
+.sp-legenda-code { font-weight: 800; font-size: 1.25rem; text-align: center !important; }
+.sp-afkortingen { display: flex; flex-wrap: wrap; gap: var(--ruimte-xs) var(--ruimte-l); margin: 0; padding: 0; list-style: none; }
+.sp-let-op { margin: 0; padding: var(--ruimte-s); border-left: 0.25rem solid var(--kleur-waarschuwing); background: var(--kleur-waarschuwing-vlak); border-radius: 0.25rem; }
+
+.sp-keuzes { display: flex; flex-direction: column; gap: var(--ruimte-xs); }
+.sp-keuze {
+  min-height: var(--raakdoel-min);
+  padding: 0.5rem var(--ruimte-m);
+  border: 0.125rem solid var(--kleur-rand);
+  border-radius: var(--radius);
+  background: var(--kleur-oppervlak);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+}
+.sp-keuze--gekozen { border-color: var(--kleur-gedaan); background: var(--kleur-gedaan-vlak); color: var(--kleur-gedaan); }
+
+/* Smal scherm: elke rij wordt een kaart zodat er nooit zijwaarts gescrold hoeft te worden. */
+@media (max-width: 40rem) {
+  .sp-tabel thead { display: none; }
+  .sp-tabel, .sp-tabel tbody, .sp-tabel tr, .sp-tabel td { display: block; width: 100%; }
+  .sp-tabel tr { padding: var(--ruimte-s); margin-bottom: var(--ruimte-s); border: 0.0625rem solid var(--kleur-rand); border-radius: var(--radius); }
+  .sp-tabel td { border: 0; padding: 0.25rem 0; }
+  .sp-kol-freq { width: auto; }
+  .sp-tabel td[data-label]::before { content: attr(data-label); display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--kleur-tekst-zwak); }
+  .sp-object { font-size: 1.125rem; }
+  .sp-dagen { gap: 0.25rem; }
+  .sp-dag { min-width: 0; padding: 0; font-size: 0.6875rem; }
+}

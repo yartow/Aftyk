@@ -1,0 +1,81 @@
+/* Gedeelde stijlen voor de drie formulierschermen. */
+
+:root {
+  /* Groen voor "uitgevoerd". Altijd samen met een ✓ getoond, nooit alleen kleur. */
+  --kleur-uitgevoerd: #2f7d3b;
+  --kleur-uitgevoerd-tekst: #ffffff;
+  --kleur-blok-uit: #d9dcde;
+  --kleur-blok-uit-tekst: #3d4246;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-thema="licht"]) {
+    --kleur-uitgevoerd: #4caf5d;
+    --kleur-uitgevoerd-tekst: #0b1a0e;
+    --kleur-blok-uit: #3a4247;
+    --kleur-blok-uit-tekst: #cfd5d9;
+  }
+}
+:root[data-thema="donker"] {
+  --kleur-uitgevoerd: #4caf5d;
+  --kleur-uitgevoerd-tekst: #0b1a0e;
+  --kleur-blok-uit: #3a4247;
+  --kleur-blok-uit-tekst: #cfd5d9;
+}
+
+.app-inhoud.app-inhoud--breed { max-width: 68rem; }
+
+.werkbalk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ruimte-xs);
+  margin-bottom: var(--ruimte-m);
+}
+.werkbalk .knop { flex: 1 1 auto; }
+
+.veldenraster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--ruimte-m);
+  align-items: end;
+}
+
+.kaartlijst { display: flex; flex-direction: column; gap: var(--ruimte-m); }
+
+.kaart-kop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ruimte-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--ruimte-s);
+}
+.kaart-kop h3 { margin: 0; font-size: 1.0625rem; }
+
+.norm { font-weight: 400; color: var(--kleur-tekst-zwak); font-size: 0.875rem; }
+
+.afwijking-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: var(--kleur-waarschuwing-vlak);
+  border: 0.0625rem solid var(--kleur-waarschuwing);
+  color: var(--kleur-waarschuwing);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.badge-ok {
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: var(--kleur-gedaan-vlak);
+  color: var(--kleur-gedaan);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.leeg-melding { text-align: center; color: var(--kleur-tekst-zwak); margin: 0; }
+
+.veldfout { color: var(--kleur-fout); font-size: 0.875rem; font-weight: 600; }

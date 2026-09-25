@@ -3,7 +3,8 @@ import { Cijferpad } from "../../components/Cijferpad";
 import { Knop } from "../../components/Knop";
 import { Invoerveld } from "../../components/Invoerveld";
 import { useAuth } from "../../context/AuthContext";
-import { t } from "../../i18n/nl";
+import { verwijderLokaleData } from "../../lib/verwijderen";
+import { t } from "../../i18n";
 
 /**
  * Dagelijkse "inlog" op het tablet. Geen e-mailadres, geen wachtwoord bij
@@ -31,6 +32,7 @@ export function PincodeScherm() {
         setFout(true);
         setWaarde("");
       }
+      // (bij een juiste pincode verdwijnt dit scherm vanzelf)
     }
   }
 
@@ -64,7 +66,17 @@ export function PincodeScherm() {
               <Knop variant="tekst" onClick={() => setMetWachtwoord(true)}>
                 {t.pincode.vergeten}
               </Knop>
-            ) : null}
+            ) : (
+              // Lokale modus heeft geen account: de enige uitweg is de gegevens op dit apparaat wissen.
+              <Knop
+                variant="tekst"
+                onClick={() => {
+                  if (window.confirm(t.pincode.wisBevestiging)) void verwijderLokaleData();
+                }}
+              >
+                {t.pincode.vergetenLokaal}
+              </Knop>
+            )}
           </>
         ) : (
           <div style={{ width: "100%", maxWidth: "24rem", display: "flex", flexDirection: "column", gap: "var(--ruimte-m)" }}>
