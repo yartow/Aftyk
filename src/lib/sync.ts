@@ -60,6 +60,8 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
   const profiel = await db.profielen.toCollection().first();
   let verstuurd = 0;
   let fouten = 0;
+  let laatsteFoutTekst: string | undefined;
+  const tekstVan = (fout: unknown) => (fout instanceof Error ? fout.message : (fout as { message?: string })?.message ?? String(fout));
   if (profiel && profiel.id === sessieData.session.user.id) {
     const orgFout = await verstuurOrganisatieEnProfiel(organisatie, profiel);
     // Zonder online bedrijf en profiel weigert de server alle documenten en locaties: meld dat duidelijk.
@@ -70,8 +72,9 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
   try {
     await verstuurLocaties(organisatie.id);
     await haalLocatiesOp();
-  } catch {
+  } catch (fout) {
     fouten += 1;
+    laatsteFoutTekst = tekstVan(fout);
   }
 
   const wachtrij = await db.uitgaand.orderBy("aangemaaktOp").toArray();
@@ -90,21 +93,23 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
       verstuurd += 1;
     } catch (fout) {
       fouten += 1;
+      laatsteFoutTekst = tekstVan(fout);
       await db.uitgaand.update(item.id, {
         pogingen: item.pogingen + 1,
-        laatsteFout: fout instanceof Error ? fout.message : (fout as { message?: string })?.message ?? String(fout),
+        laatsteFout: laatsteFoutTekst,
       });
     }
   }
 
   try {
     await haalDocumentenOp();
-  } catch {
+  } catch (fout) {
     fouten += 1;
+    laatsteFoutTekst = tekstVan(fout);
   }
 
   await zetInstelling(SLEUTEL_LAATSTE_SYNC, new Date().toISOString());
-  return { gelukt: fouten === 0, verstuurd, fouten };
+  return { gelukt: fouten === 0, verstuurd, fouten, foutmelding: laatsteFoutTekst };
 }
 
 export async function laatsteSyncTijd(): Promise<Date | null> {

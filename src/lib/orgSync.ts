@@ -35,13 +35,25 @@ export async function verstuurOrganisatieEnProfiel(organisatie: Organisatie, pro
     if (bijwerkFout) return bijwerkFout.message;
   }
 
-  const { error: profielFout } = await supabase.from("profielen").upsert({
+  // Ook hier bewust géén upsert: bij INSERT … ON CONFLICT DO UPDATE toetst Postgres de nieuwe rij
+  // eerst aan de INSERT-policy ("organisatie heeft nog geen profiel"), en die weigert een bestaand
+  // profiel. Dus: eerst bijwerken; bestaat het profiel nog niet, dan aanmaken.
+  // (organisatie_id wordt nooit meegestuurd bij een update: dat mag niet meer wijzigen.)
+  const { data: bijgewerkt, error: bijwerkProfielFout } = await supabase
+    .from("profielen")
+    .update({ naam: profiel.naam, rol: profiel.rol })
+    .eq("id", profiel.id)
+    .select("id");
+  if (bijwerkProfielFout) return bijwerkProfielFout.message;
+  if (bijgewerkt && bijgewerkt.length > 0) return null;
+
+  const { error: nieuwProfielFout } = await supabase.from("profielen").insert({
     id: profiel.id,
     organisatie_id: profiel.organisatieId,
     naam: profiel.naam,
     rol: profiel.rol,
   });
-  return profielFout ? profielFout.message : null;
+  return nieuwProfielFout ? nieuwProfielFout.message : null;
 }
 
 export type OphaalUitkomst =
