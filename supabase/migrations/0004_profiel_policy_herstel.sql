@@ -8,16 +8,7 @@
 --
 -- Uitvoeren na 0003 (SQL Editor, of `supabase db reset` / `supabase db push`).
 
-drop policy if exists "profiel: eigen profiel aanmaken" on profielen;
-create policy "profiel: eigen profiel aanmaken" on profielen
-  for insert with check (
-    id = auth.uid()
-    -- Let op: `profielen.organisatie_id` is de nieuwe rij, `bestaand` de bestaande profielen.
-    -- (RLS beperkt bestaand hier tot het eigen profiel; een bestaande organisatie wordt
-    -- daarom aanvullend geblokkeerd via de security-definer-functie hieronder.)
-    and not organisatie_heeft_profiel(organisatie_id)
-  );
-
+-- De functie moet bestaan vóórdat de policy ernaar verwijst.
 create or replace function organisatie_heeft_profiel(p_organisatie uuid)
 returns boolean
 language sql
@@ -29,3 +20,13 @@ as $$
 $$;
 revoke execute on function organisatie_heeft_profiel(uuid) from public, anon;
 grant execute on function organisatie_heeft_profiel(uuid) to authenticated;
+
+drop policy if exists "profiel: eigen profiel aanmaken" on profielen;
+create policy "profiel: eigen profiel aanmaken" on profielen
+  for insert with check (
+    id = auth.uid()
+    -- Let op: `profielen.organisatie_id` is de nieuwe rij, `bestaand` de bestaande profielen.
+    -- (RLS beperkt bestaand hier tot het eigen profiel; een bestaande organisatie wordt
+    -- daarom aanvullend geblokkeerd via de security-definer-functie hierboven.)
+    and not organisatie_heeft_profiel(organisatie_id)
+  );
