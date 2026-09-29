@@ -16,7 +16,8 @@ import { useDocument } from "../../lib/documenten";
 import { maandagVan, verschuifWeek, weekLabel, weekSleutel } from "../../lib/kalender";
 import { werkdatumVan } from "../../lib/format";
 import { nieuweId } from "../../lib/id";
-import { metLeverancier } from "../../lib/leveranciers";
+import { metLeverancier, schoonNaam } from "../../lib/leveranciers";
+import { LeverancierZoeker } from "../../components/LeverancierZoeker";
 import { maakWeekformulierPdf, pdfBestandsnaam } from "../../lib/pdf";
 import {
   CCP_PROCESSEN,
@@ -178,13 +179,6 @@ export function WeekformulierScherm() {
           <p className="tekst-zwak" style={{ margin: 0 }}>
             {t.weekformulier.ontvangstUitleg}
           </p>
-          <datalist id="leveranciers-lijst">
-            {(leveranciers.waarde?.leveranciers ?? [])
-              .filter((l) => !l.gearchiveerd)
-              .map((l) => (
-                <option key={l.id} value={l.naam} />
-              ))}
-          </datalist>
           {f.ontvangst.length === 0 ? <p className="leeg-melding">{t.weekformulier.geenAfwijkingen}</p> : null}
           <div className="kaartlijst">
             {f.ontvangst.map((r) => (
@@ -194,7 +188,19 @@ export function WeekformulierScherm() {
                     <span className="invoerveld-label">{t.weekformulier.datumControle}</span>
                     <DatumBlad waarde={r.datum} onWijzig={(d) => zetOntvangst(r.id, { datum: d })} leegLabel={t.algemeen.kiesDatum} titel={t.weekformulier.datumControle} />
                   </div>
-                  <Invoerveld id={`lev-${r.id}`} label={t.weekformulier.leverancier} list="leveranciers-lijst" value={r.leverancier} onChange={(e) => zetOntvangst(r.id, { leverancier: e.target.value })} onBlur={(e) => bewaarLeverancier(e.target.value)} />
+                  <LeverancierZoeker
+                    id={`lev-${r.id}`}
+                    label={t.weekformulier.leverancier}
+                    autoFocus={false}
+                    leveranciers={leveranciers.waarde?.leveranciers ?? []}
+                    waarde={r.leverancier}
+                    onWijzig={(naam) => zetOntvangst(r.id, { leverancier: naam })}
+                    onKies={(naam) => {
+                      zetOntvangst(r.id, { leverancier: schoonNaam(naam) });
+                      bewaarLeverancier(naam);
+                    }}
+                    onBlur={bewaarLeverancier}
+                  />
                   <Invoerveld id={`prod-${r.id}`} label={t.weekformulier.product} value={r.product} onChange={(e) => zetOntvangst(r.id, { product: e.target.value })} />
                   <Invoerveld id={`temp-${r.id}`} label={t.weekformulier.temperatuur} inputMode="decimal" value={r.temperatuur} onChange={(e) => zetOntvangst(r.id, { temperatuur: alleenGetal(e.target.value, "temperatuur") })} />
                   <Segmentknop label={t.weekformulier.verpakking} opties={voOpties()} waarde={r.verpakking} onWijzig={(v: VO) => zetOntvangst(r.id, { verpakking: v })} />
