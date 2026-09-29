@@ -24,6 +24,21 @@ Onderin het scherm ziet u altijd twee knoppen: **Start** (terug naar het beginsc
 4. Wilt u eerst zien hoe de app werkt? Tik op **Of bekijk eerst de demo** (zie hoofdstuk 10).
 5. Er wordt automatisch één **locatie** aangemaakt op uw bezoekadres. Heeft u maar één vestiging, dan merkt u daar verder niets van.
 
+### De app op het beginscherm zetten
+
+Zet de app op het beginscherm van uw telefoon of tablet. U opent hem dan als een gewone app, en uw gegevens blijven veilig bewaard. Doet u dit niet, dan kan Safari op een iPhone of iPad de opgeslagen gegevens na ongeveer een week zonder gebruik wissen.
+
+**iPhone of iPad (Safari):**
+1. Open de app in **Safari**.
+2. Tik onderin op **Deel** (het vierkantje met een pijl omhoog).
+3. Scrol omlaag en kies **Zet op beginscherm**.
+4. Tik rechtsboven op **Voeg toe**.
+5. Open de app voortaan via het icoon op uw beginscherm, niet meer via Safari.
+
+Op een iPhone of iPad ziet u hierover eenmalig een tip onderin het scherm. Tik op **Begrepen** om die te sluiten.
+
+**Android (Chrome):** tik op het menu (drie puntjes) en kies **App installeren** of **Toevoegen aan startscherm**.
+
 ## 3. Het Schoonmaakplan
 
 Hier ziet u alle objecten (vriezers, werkbanken, vloer, enzovoort) met hoe vaak ze schoongemaakt moeten worden.

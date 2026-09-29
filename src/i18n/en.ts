@@ -356,6 +356,12 @@ export const en: Vertaling = {
     locatie: "Location",
   },
 
+  installatie: {
+    titel: "Add the app to your Home Screen",
+    uitleg: 'Tap Share (the square with an arrow pointing up) at the bottom, choose "Add to Home Screen" and tap "Add". Open the app from its icon from then on. This keeps your data safe.',
+    begrepen: "Got it",
+  },
+
   demo: {
     banner: "Demo mode — what you enter is not saved to your real records.",
     verlaten: "Leave demo",
