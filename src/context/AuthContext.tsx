@@ -56,6 +56,8 @@ interface AuthState {
   logUit: () => Promise<void>;
   verstuurResetLink: (email: string) => Promise<{ fout?: string }>;
   stelNieuwWachtwoordIn: (nieuwWachtwoord: string) => Promise<{ fout?: string }>;
+  /** Wachtwoord wijzigen vanuit Instellingen: controleert eerst het huidige wachtwoord (telt mee in de pogingenteller). */
+  wijzigWachtwoord: (huidigWachtwoord: string, nieuwWachtwoord: string) => Promise<{ fout?: string }>;
 
   richtOrganisatieIn: (gegevens: BedrijfsgegevensInvoer) => Promise<void>;
   werkOrganisatieBij: (gegevens: BedrijfsgegevensInvoer) => Promise<void>;
@@ -229,6 +231,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   };
 
+  const wijzigWachtwoord: AuthState["wijzigWachtwoord"] = async (huidigWachtwoord, nieuwWachtwoord) => {
+    if (!supabase) return { fout: t.sync.geenProject };
+    const email = sessie?.user.email;
+    if (!email) return { fout: t.auth.onjuist };
+    if ((await haalPogingen("wachtwoord")) >= MAX_POGINGEN.wachtwoord) return { fout: t.auth.geblokkeerd };
+    const { error } = await supabase.auth.signInWithPassword({ email, password: huidigWachtwoord });
+    if (error) {
+      if (error.code === "invalid_credentials" || /invalid login credentials/i.test(error.message)) await verhoogPogingen("wachtwoord");
+      return { fout: vertaalAuthFout(error.message) };
+    }
+    await resetPogingen("wachtwoord"); // huidige wachtwoord klopte, ook als het nieuwe wordt afgewezen
+    return stelNieuwWachtwoordIn(nieuwWachtwoord);
+  };
+
   const richtOrganisatieIn: AuthState["richtOrganisatieIn"] = async (gegevens) => {
     const gebruikerId = sessie?.user.id ?? `lokaal-${nieuweId()}`;
     const organisatieId = nieuweId();
@@ -312,6 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logUit,
     verstuurResetLink,
     stelNieuwWachtwoordIn,
+    wijzigWachtwoord,
     richtOrganisatieIn,
     werkOrganisatieBij,
     ontgrendelMetPincode,

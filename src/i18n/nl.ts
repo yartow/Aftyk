@@ -307,6 +307,9 @@ export const nl = {
     locaties: "Locaties",
     account: "Account",
     uitloggen: "Uitloggen",
+    huidigWachtwoord: "Huidig wachtwoord",
+    wachtwoordWijzigen: "Wachtwoord wijzigen",
+    wachtwoordOpgeslagen: "Je wachtwoord is gewijzigd.",
     ingelogdAls: (naam: string) => `Ingelogd als ${naam}`,
   },
 

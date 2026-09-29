@@ -305,6 +305,9 @@ export const en: Vertaling = {
     locaties: "Locations",
     account: "Account",
     uitloggen: "Log out",
+    huidigWachtwoord: "Current password",
+    wachtwoordWijzigen: "Change password",
+    wachtwoordOpgeslagen: "Your password has been changed.",
     ingelogdAls: (naam) => `Logged in as ${naam}`,
   },
 

@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppKop } from "../../components/AppKop";
 import { Kaart } from "../../components/Kaart";
 import { Knop } from "../../components/Knop";
+import { Invoerveld } from "../../components/Invoerveld";
+import { Uitklapblok } from "../../components/Uitklapblok";
 import { HoofdNavigatie } from "../../components/HoofdNavigatie";
 import { Cijferpad } from "../../components/Cijferpad";
 import { VerwijderBevestiging } from "../../components/VerwijderBevestiging";
@@ -24,7 +26,7 @@ import type { Tekstgrootte, Thema } from "../../types/domain";
 export function InstellingenScherm() {
   const navigate = useNavigate();
   const { tekstgrootte, thema, taal, zetTekstgrootte, zetThema, zetTaal } = useInstellingen();
-  const { organisatie, profiel, modus, sessie, logUit, vergrendel } = useAuth();
+  const { organisatie, profiel, modus, sessie, logUit, vergrendel, wijzigWachtwoord } = useAuth();
   const [verwijderSoort, setVerwijderSoort] = useState<"lokaal" | "online" | null>(null);
   const demo = isDemo();
   const { actieveLocatie } = useLocatie();
@@ -39,6 +41,12 @@ export function InstellingenScherm() {
   useEffect(() => {
     void haalVergrendelMinuten().then(setVergrendelMinuten);
   }, []);
+  const [huidigWachtwoord, setHuidigWachtwoord] = useState("");
+  const [nieuwWachtwoord, setNieuwWachtwoord] = useState("");
+  const [wachtwoordBevestiging, setWachtwoordBevestiging] = useState("");
+  const [wachtwoordFout, setWachtwoordFout] = useState<string | null>(null);
+  const [wachtwoordBericht, setWachtwoordBericht] = useState<string | null>(null);
+  const [wachtwoordBezig, setWachtwoordBezig] = useState(false);
   const [syncBericht, setSyncBericht] = useState<string | null>(null);
   const [syncBezig, setSyncBezig] = useState(false);
   const [herstelBericht, setHerstelBericht] = useState<string | null>(null);
@@ -54,6 +62,27 @@ export function InstellingenScherm() {
     } catch (fout) {
       setHerstelBericht(fout instanceof Error ? fout.message : t.instellingen.backupMislukt);
     }
+  }
+
+  async function wachtwoordWijzigen(e: FormEvent) {
+    e.preventDefault();
+    setWachtwoordFout(null);
+    setWachtwoordBericht(null);
+    if (nieuwWachtwoord !== wachtwoordBevestiging) {
+      setWachtwoordFout(t.auth.wachtwoordenKomenNietOvereen);
+      return;
+    }
+    setWachtwoordBezig(true);
+    const resultaat = await wijzigWachtwoord(huidigWachtwoord, nieuwWachtwoord);
+    setWachtwoordBezig(false);
+    if (resultaat.fout) {
+      setWachtwoordFout(resultaat.fout);
+      return;
+    }
+    setHuidigWachtwoord("");
+    setNieuwWachtwoord("");
+    setWachtwoordBevestiging("");
+    setWachtwoordBericht(t.instellingen.wachtwoordOpgeslagen);
   }
 
   async function handSync() {
@@ -306,6 +335,41 @@ export function InstellingenScherm() {
             <h2>{t.instellingen.account}</h2>
             <Kaart style={{ display: "flex", flexDirection: "column", gap: "var(--ruimte-s)" }}>
               {profiel ? <p style={{ margin: 0 }}>{t.instellingen.ingelogdAls(profiel.naam)}</p> : null}
+              {sessie ? (
+                <Uitklapblok titel={t.instellingen.wachtwoordWijzigen}>
+                  <form onSubmit={wachtwoordWijzigen} style={{ display: "flex", flexDirection: "column", gap: "var(--ruimte-m)" }}>
+                    <Invoerveld
+                      label={t.instellingen.huidigWachtwoord}
+                      type="password"
+                      required
+                      value={huidigWachtwoord}
+                      onChange={(e) => setHuidigWachtwoord(e.target.value)}
+                      autoComplete="current-password"
+                    />
+                    <Invoerveld
+                      label={t.auth.nieuwWachtwoord}
+                      type="password"
+                      required
+                      minLength={6}
+                      value={nieuwWachtwoord}
+                      onChange={(e) => setNieuwWachtwoord(e.target.value)}
+                      autoComplete="new-password"
+                    />
+                    <Invoerveld
+                      label={t.auth.nieuwWachtwoordBevestigen}
+                      type="password"
+                      required
+                      minLength={6}
+                      value={wachtwoordBevestiging}
+                      onChange={(e) => setWachtwoordBevestiging(e.target.value)}
+                      autoComplete="new-password"
+                    />
+                    {wachtwoordFout ? <p style={{ color: "var(--kleur-fout)", margin: 0 }}>{wachtwoordFout}</p> : null}
+                    {wachtwoordBericht ? <p className="tekst-zwak" style={{ margin: 0 }}>{wachtwoordBericht}</p> : null}
+                    <Knop type="submit" disabled={wachtwoordBezig}>{t.auth.wachtwoordInstellen}</Knop>
+                  </form>
+                </Uitklapblok>
+              ) : null}
               <Knop variant="gevaar" onClick={() => logUit()}>{t.instellingen.uitloggen}</Knop>
             </Kaart>
           </section>
