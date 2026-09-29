@@ -10,6 +10,7 @@ import { PeriodeKiezer } from "../../components/PeriodeKiezer";
 import { Uitklapblok } from "../../components/Uitklapblok";
 import { DatumBlad } from "../../components/DatumBlad";
 import { PdfKeuze } from "../../components/PdfKeuze";
+import { useWeekformulierConfig } from "../../lib/weekformulierConfig";
 import { usePdfBron } from "../../context/LocatieContext";
 import { useDocument } from "../../lib/documenten";
 import { maandagVan, verschuifWeek, weekLabel, weekSleutel } from "../../lib/kalender";
@@ -45,6 +46,26 @@ function AfwijkingBadge() {
   );
 }
 
+/** Verborgen punten (n.v.t.): één regel per punt, met een knop om het weer te tonen. */
+function VerborgenLijst({ items, onTonen }: { items: { id: string; naam: string }[]; onTonen: (id: string) => void }) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className="tekst-zwak" style={{ marginBottom: "var(--ruimte-s)" }}>
+        {t.weekformulier.verborgenTitel(items.length)}
+      </p>
+      {items.map((i) => (
+        <div key={i.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "var(--ruimte-s)" }}>
+          <span>{i.naam}</span>
+          <Knop variant="tekst" onClick={() => onTonen(i.id)}>
+            {t.weekformulier.tonen}
+          </Knop>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function WeekformulierScherm() {
   const pdfBron = usePdfBron();
   const [maandag, setMaandagRuw] = useState(() => maandagVan(new Date()));
@@ -58,8 +79,13 @@ export function WeekformulierScherm() {
     setControleDatum("");
   };
   const leveranciers = useDocument<LeveranciersConfig>("leveranciers-config", "config", () => ({ leveranciers: [] }));
+  const { verborgen, zetVerborgen } = useWeekformulierConfig();
 
-  if (!formulier.waarde) return null;
+  if (!formulier.waarde || !verborgen) return null;
+  const zichtbareOpslag = OPSLAG_EENHEDEN.filter((e) => !verborgen.has(e.id));
+  const verborgenOpslag = OPSLAG_EENHEDEN.filter((e) => verborgen.has(e.id));
+  const zichtbareCcps = CCP_PROCESSEN.filter((p) => !verborgen.has(p.id));
+  const verborgenCcps = CCP_PROCESSEN.filter((p) => verborgen.has(p.id));
   const f = formulier.waarde;
   const vandaag = werkdatumVan(new Date());
   const label = weekLabel(maandag);
@@ -105,19 +131,19 @@ export function WeekformulierScherm() {
     formulier.wijzig((w) => ({ ...w, ontvangst: [...w.ontvangst, rij] }));
   }
 
-  const maakPdf = () => maakWeekformulierPdf(pdfBron, maandag, f);
+  const maakPdf = () => maakWeekformulierPdf(pdfBron, maandag, f, verborgen);
 
   function kopieerDatum() {
     if (!controleDatum) return;
     formulier.wijzig((w) => ({
       ...w,
-      opslag: Object.fromEntries(OPSLAG_EENHEDEN.map((e) => [e.id, { ...(w.opslag[e.id] ?? leegOpslagRij()), datum: controleDatum }])),
-      ccps: Object.fromEntries(CCP_PROCESSEN.map((p) => [p.id, { ...(w.ccps[p.id] ?? leegCcpRij()), datum: controleDatum }])),
+      opslag: Object.fromEntries(zichtbareOpslag.map((e) => [e.id, { ...(w.opslag[e.id] ?? leegOpslagRij()), datum: controleDatum }])),
+      ccps: Object.fromEntries(zichtbareCcps.map((p) => [p.id, { ...(w.ccps[p.id] ?? leegCcpRij()), datum: controleDatum }])),
     }));
   }
 
-  const aantalOpslagAfwijkingen = OPSLAG_EENHEDEN.filter((e) => opslagAfwijking(e, f.opslag[e.id]?.temperatuur ?? "")).length;
-  const aantalCcpAfwijkingen = CCP_PROCESSEN.filter((p) => ccpAfwijking(p, f.ccps[p.id])).length;
+  const aantalOpslagAfwijkingen = zichtbareOpslag.filter((e) => opslagAfwijking(e, f.opslag[e.id]?.temperatuur ?? "")).length;
+  const aantalCcpAfwijkingen = zichtbareCcps.filter((p) => ccpAfwijking(p, f.ccps[p.id])).length;
   const badge = (aantal: number) => (aantal > 0 ? <AfwijkingBadge /> : null);
 
   return (
@@ -136,7 +162,7 @@ export function WeekformulierScherm() {
 
         <Kaart>
           <div className="veldenraster">
-            <div>
+            <div className="veld">
               <span className="invoerveld-label">{t.weekformulier.datumControle}</span>
               <DatumBlad waarde={controleDatum} onWijzig={setControleDatum} leegLabel={t.algemeen.kiesDatum} titel={t.weekformulier.datumControle} />
             </div>
@@ -164,7 +190,7 @@ export function WeekformulierScherm() {
             {f.ontvangst.map((r) => (
               <Kaart key={r.id}>
                 <div className="veldenraster">
-                  <div>
+                  <div className="veld">
                     <span className="invoerveld-label">{t.weekformulier.datumControle}</span>
                     <DatumBlad waarde={r.datum} onWijzig={(d) => zetOntvangst(r.id, { datum: d })} leegLabel={t.algemeen.kiesDatum} titel={t.weekformulier.datumControle} />
                   </div>
@@ -198,7 +224,7 @@ export function WeekformulierScherm() {
 
         <Uitklapblok titel={t.weekformulier.opslag} beginOpen badge={badge(aantalOpslagAfwijkingen)}>
           <div className="kaartlijst">
-            {OPSLAG_EENHEDEN.map((e) => {
+            {zichtbareOpslag.map((e) => {
               const r = f.opslag[e.id] ?? leegOpslagRij();
               const afwijking = opslagAfwijking(e, r.temperatuur);
               return (
@@ -210,20 +236,29 @@ export function WeekformulierScherm() {
                     {afwijking ? <AfwijkingBadge /> : r.temperatuur ? <span className="badge-ok">✓ {t.weekformulier.binnenNorm}</span> : null}
                   </div>
                   <div className="veldenraster">
-                    <div>
+                    <div className="veld">
                       <span className="invoerveld-label">{t.weekformulier.datumControle}</span>
                       <DatumBlad waarde={r.datum} onWijzig={(d) => zetOpslag(e.id, { datum: d })} leegLabel={t.algemeen.kiesDatum} titel={`${e.naam} — ${t.weekformulier.datumControle}`} />
                     </div>
                     <Invoerveld id={`opslag-t-${e.id}`} label={t.weekformulier.temperatuur} inputMode="decimal" value={r.temperatuur} onChange={(ev) => zetOpslag(e.id, { temperatuur: alleenGetal(ev.target.value, "temperatuur") })} />
-                    {e.afgedektNvt ? (
-                      <div>
-                        <span className="invoerveld-label">{t.weekformulier.afgedekt}</span>
-                        <p style={{ margin: 0 }}>{t.weekformulier.nvt}</p>
+                    {e.soort === "friteuse" ? (
+                      <div className="veld">
+                        <span className="invoerveld-label">{t.weekformulier.olieVerversOp}</span>
+                        <DatumBlad waarde={r.olieVerversOp ?? ""} onWijzig={(d) => zetOpslag(e.id, { olieVerversOp: d })} leegLabel={t.algemeen.kiesDatum} titel={`${e.naam} — ${t.weekformulier.olieVerversOp}`} />
                       </div>
                     ) : (
-                      <Segmentknop label={t.weekformulier.afgedekt} opties={voOpties()} waarde={r.afgedekt} onWijzig={(v: VO) => zetOpslag(e.id, { afgedekt: v })} />
+                      <>
+                        {e.afgedektNvt ? (
+                          <div className="veld">
+                            <span className="invoerveld-label">{t.weekformulier.afgedekt}</span>
+                            <p style={{ margin: 0 }}>{t.weekformulier.nvt}</p>
+                          </div>
+                        ) : (
+                          <Segmentknop label={t.weekformulier.afgedekt} opties={voOpties()} waarde={r.afgedekt} onWijzig={(v: VO) => zetOpslag(e.id, { afgedekt: v })} />
+                        )}
+                        <Segmentknop label={t.weekformulier.fifoTht} opties={voOpties()} waarde={r.fifoTht} onWijzig={(v: VO) => zetOpslag(e.id, { fifoTht: v })} />
+                      </>
                     )}
-                    <Segmentknop label={t.weekformulier.fifoTht} opties={voOpties()} waarde={r.fifoTht} onWijzig={(v: VO) => zetOpslag(e.id, { fifoTht: v })} />
                     <Invoerveld id={`opslag-p-${e.id}`} label={t.weekformulier.paraaf} value={r.paraaf} onChange={(ev) => zetOpslag(e.id, { paraaf: ev.target.value })} />
                   </div>
                   {afwijking || r.actie ? (
@@ -232,15 +267,21 @@ export function WeekformulierScherm() {
                       {afwijking && !r.actie.trim() ? <span className="veldfout">{t.weekformulier.actieVerplicht}</span> : null}
                     </div>
                   ) : null}
+                  <div style={{ marginTop: "var(--ruimte-s)" }}>
+                    <Knop variant="tekst" onClick={() => zetVerborgen(e.id, true)}>
+                      {t.weekformulier.verbergen}
+                    </Knop>
+                  </div>
                 </Kaart>
               );
             })}
           </div>
+          <VerborgenLijst items={verborgenOpslag} onTonen={(id) => zetVerborgen(id, false)} />
         </Uitklapblok>
 
         <Uitklapblok titel={t.weekformulier.processen} badge={badge(aantalCcpAfwijkingen)}>
           <div className="kaartlijst">
-            {CCP_PROCESSEN.map((p) => {
+            {zichtbareCcps.map((p) => {
               const r = f.ccps[p.id] ?? leegCcpRij();
               const afwijking = ccpAfwijking(p, f.ccps[p.id]);
               return (
@@ -252,7 +293,7 @@ export function WeekformulierScherm() {
                     {afwijking ? <AfwijkingBadge /> : r.waarde ? <span className="badge-ok">✓ {t.weekformulier.binnenNorm}</span> : null}
                   </div>
                   <div className="veldenraster">
-                    <div>
+                    <div className="veld">
                       <span className="invoerveld-label">{t.weekformulier.datumControle}</span>
                       <DatumBlad waarde={r.datum} onWijzig={(d) => zetCcp(p.id, { datum: d })} leegLabel={t.algemeen.kiesDatum} titel={`${p.naam} — ${t.weekformulier.datumControle}`} />
                     </div>
@@ -269,16 +310,22 @@ export function WeekformulierScherm() {
                       {afwijking && !r.actie.trim() ? <span className="veldfout">{t.weekformulier.actieVerplicht}</span> : null}
                     </div>
                   ) : null}
+                  <div style={{ marginTop: "var(--ruimte-s)" }}>
+                    <Knop variant="tekst" onClick={() => zetVerborgen(p.id, true)}>
+                      {t.weekformulier.verbergen}
+                    </Knop>
+                  </div>
                 </Kaart>
               );
             })}
           </div>
+          <VerborgenLijst items={verborgenCcps} onTonen={(id) => zetVerborgen(id, false)} />
         </Uitklapblok>
 
         <Uitklapblok titel={t.weekformulier.beoordeling}>
           <div className="veldenraster">
             <Invoerveld id="beoordeeld-door" label={t.weekformulier.beoordeeldDoor} value={f.beoordeeldDoor} onChange={(e) => formulier.wijzig((w) => ({ ...w, beoordeeldDoor: e.target.value }))} />
-            <div>
+            <div className="veld">
               <span className="invoerveld-label">{t.weekformulier.datum}</span>
               <DatumBlad waarde={f.beoordeeldOp} onWijzig={(d) => formulier.wijzig((w) => ({ ...w, beoordeeldOp: d }))} leegLabel={t.algemeen.kiesDatum} titel={t.weekformulier.datum} />
             </div>

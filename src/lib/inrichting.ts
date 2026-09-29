@@ -1,26 +1,20 @@
+import { haalInstelling, zetInstelling } from "../db/db";
 import type { Organisatie } from "../types/domain";
 
 const SLEUTEL = "inrichting_overgeslagen";
 
 /**
  * De eerste-keer-inrichting mag worden overgeslagen ("Later invullen"). Dat
- * geldt voor deze sessie; bij de volgende start wordt er opnieuw naar
- * gevraagd, tot de gegevens zijn ingevuld.
+ * wordt bewaard bij de gebruiker (niet bij het apparaat), zodat het scherm
+ * niet bij elke start terugkomt; de bedrijfsgegevens blijven altijd te
+ * vullen via Instellingen.
  */
-export function inrichtingIsOvergeslagen(): boolean {
-  try {
-    return sessionStorage.getItem(SLEUTEL) === "1";
-  } catch {
-    return false;
-  }
+export async function inrichtingIsOvergeslagen(): Promise<boolean> {
+  return (await haalInstelling(SLEUTEL)) === "1";
 }
 
-export function zetInrichtingOvergeslagen(): void {
-  try {
-    sessionStorage.setItem(SLEUTEL, "1");
-  } catch {
-    /* niet kritiek */
-  }
+export async function zetInrichtingOvergeslagen(): Promise<void> {
+  await zetInstelling(SLEUTEL, "1");
 }
 
 /** Kop voor PDF's zolang er nog geen bedrijfsgegevens zijn ingevuld. */

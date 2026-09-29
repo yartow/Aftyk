@@ -4,7 +4,6 @@ import { AppKop } from "../../components/AppKop";
 import { Invoerveld } from "../../components/Invoerveld";
 import { Knop } from "../../components/Knop";
 import { useAuth } from "../../context/AuthContext";
-import { zetInrichtingOvergeslagen } from "../../lib/inrichting";
 import { startDemo } from "../../lib/demo";
 import { isDemo } from "../../lib/modus";
 import { t } from "../../i18n";
@@ -17,7 +16,7 @@ import { t } from "../../i18n";
  */
 export function BedrijfsgegevensScherm({ bewerkModus = false }: { bewerkModus?: boolean }) {
   const navigate = useNavigate();
-  const { organisatie, richtOrganisatieIn, werkOrganisatieBij } = useAuth();
+  const { organisatie, richtOrganisatieIn, werkOrganisatieBij, slaInrichtingOver } = useAuth();
 
   const [naam, setNaam] = useState(organisatie?.naam ?? "");
   const [kvkNummer, setKvkNummer] = useState(organisatie?.kvkNummer ?? "");
@@ -61,11 +60,11 @@ export function BedrijfsgegevensScherm({ bewerkModus = false }: { bewerkModus?: 
   }
 
   /** Bij bewerken: terug naar Instellingen. Bij eerste inrichting: overslaan, later invullen. */
-  function annuleren() {
+  async function annuleren() {
     if (bewerkModus) {
       navigate("/instellingen");
     } else {
-      zetInrichtingOvergeslagen();
+      await slaInrichtingOver();
       navigate("/");
     }
   }

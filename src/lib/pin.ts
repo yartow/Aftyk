@@ -2,7 +2,8 @@ import bcrypt from "bcryptjs";
 import { haalInstelling, zetInstelling } from "../db/db";
 
 /**
- * De pincode is uitsluitend een lokaal gemak-slot tegen "iemand pakt de
+ * De pincode is verplicht en geldt per apparaat (dezelfde gebruiker kan op
+ * elke telefoon een andere pincode hebben). Hij is uitsluitend een lokaal gemak-slot tegen "iemand pakt de
  * tablet op en tikt raak" — géén beveiligingsgrens. Hij wordt gehasht
  * opgeslagen en volledig lokaal gecontroleerd, zodat het zonder internet
  * werkt. Het echte wachtwoord (Supabase-account) beveiligt het archief op
@@ -22,7 +23,9 @@ export async function zetPincode(nieuwePincode: string): Promise<void> {
   await zetInstelling(SLEUTEL_INGESCHAKELD, "true");
 }
 
-export async function schakelPincodeUit(): Promise<void> {
+/** Vergeten pincode: wissen, zodat de gebruiker (na inloggen met het wachtwoord) een nieuwe kiest. */
+export async function wisPincode(): Promise<void> {
+  await zetInstelling(SLEUTEL_HASH, "");
   await zetInstelling(SLEUTEL_INGESCHAKELD, "false");
 }
 

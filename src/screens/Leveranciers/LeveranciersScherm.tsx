@@ -1,26 +1,28 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { AppKop } from "../../components/AppKop";
 import { StatusBalk } from "../../components/StatusBalk";
 import { HoofdNavigatie } from "../../components/HoofdNavigatie";
 import { Knop } from "../../components/Knop";
 import { Kaart } from "../../components/Kaart";
 import { Invoerveld, Tekstveld } from "../../components/Invoerveld";
+import { BevestigBlad } from "../../components/BevestigBlad";
+import { useToast } from "../../components/Toast";
+import { LeverancierZoeker } from "../../components/LeverancierZoeker";
 import { Segmentknop } from "../../components/Segmentknop";
 import { PeriodeKiezer } from "../../components/PeriodeKiezer";
 import { DatumBlad } from "../../components/DatumBlad";
 import { PdfKeuze } from "../../components/PdfKeuze";
-import { Link } from "react-router-dom";
-import { usePdfBron, useLocatie } from "../../context/LocatieContext";
-import { bewaarDocument, haalDocument, useDocument } from "../../lib/documenten";
+import { usePdfBron } from "../../context/LocatieContext";
+import { useDocument } from "../../lib/documenten";
 import { maandLabel, maandSleutel, verschuifMaand } from "../../lib/kalender";
 import { werkdatumVan } from "../../lib/format";
-import { metLeverancier } from "../../lib/leveranciers";
+import { nieuweId } from "../../lib/id";
+import { LEGE_MAAND, metLeverancier, normaliseerMaand, sorteerControles, zoekLeverancier } from "../../lib/leveranciers";
 import { maakLeveranciersPdf, pdfBestandsnaam } from "../../lib/pdf";
 import { t } from "../../i18n";
-import type { Betrouwbaarheid, Conclusie, LeverancierBeoordeling, LeveranciersConfig, LeveranciersMaand } from "../../types/domain";
+import type { Betrouwbaarheid, Conclusie, LeverancierControle, LeveranciersConfig, LeveranciersMaand } from "../../types/domain";
 import "../formulieren.css";
-
-const LEEG: LeverancierBeoordeling = { certificaat: null, verloopdatum: "", betrouwbaarheid: null, opmerking: "", conclusie: null };
 
 /** Aantal dagen tot een datum (negatief = verlopen). */
 function dagenTot(datum: string): number {
@@ -30,41 +32,64 @@ function dagenTot(datum: string): number {
 
 export function LeveranciersScherm() {
   const pdfBron = usePdfBron();
-  const { actieveLocatieId } = useLocatie();
   const [maand, setMaand] = useState(() => verschuifMaand(new Date(), 0));
-  const [nieuweNaam, setNieuweNaam] = useState("");
+  // Waar het naamveld staat: bij de knop waarmee de gebruiker het opende (boven of onder).
+  const [kiest, setKiest] = useState<"boven" | "onder" | null>(null);
+  const [teVerwijderen, setTeVerwijderen] = useState<LeverancierControle | null>(null);
+  const { toon, toast } = useToast();
   const [pdfOpen, setPdfOpen] = useState(false);
   const config = useDocument<LeveranciersConfig>("leveranciers-config", "config", () => ({ leveranciers: [] }));
-  const dezeMaand = useDocument<LeveranciersMaand>("leveranciers-maand", maandSleutel(maand), () => ({ beoordelingen: {} }));
+  const dezeMaand = useDocument<LeveranciersMaand>("leveranciers-maand", maandSleutel(maand), () => LEGE_MAAND);
 
   if (!config.waarde || !dezeMaand.waarde) return null;
-  const beoordelingen = dezeMaand.waarde.beoordelingen;
-  // Gearchiveerde leveranciers blijven zichtbaar in maanden waarin ze zijn beoordeeld, zodat geschiedenis niet verdwijnt.
-  const lijst = config.waarde.leveranciers.filter((l) => !l.gearchiveerd || beoordelingen[l.id]);
-  const alleNamen = config.waarde.leveranciers;
+  const cfg = config.waarde;
+  const controles = sorteerControles(normaliseerMaand(dezeMaand.waarde, cfg).controles);
 
-  const zet = (id: string, deel: Partial<LeverancierBeoordeling>) =>
-    dezeMaand.wijzig((m) => ({ ...m, beoordelingen: { ...m.beoordelingen, [id]: { ...LEEG, ...m.beoordelingen[id], ...deel } } }));
+  const zet = (id: string, deel: Partial<LeverancierControle>) =>
+    dezeMaand.wijzig((m) => ({ controles: normaliseerMaand(m, cfg).controles.map((c) => (c.id === id ? { ...c, ...deel } : c)) }));
 
-  function voegToe() {
-    const naam = nieuweNaam.trim();
-    if (!naam) return;
-    // Bestaande naam? Dan niet dubbel toevoegen (een gearchiveerde wordt teruggezet).
-    if (metLeverancier(config.waarde!, naam) !== config.waarde) config.wijzig((c) => metLeverancier(c, naam));
-    setNieuweNaam("");
+  function verwijder(id: string) {
+    dezeMaand.wijzig((m) => ({ controles: normaliseerMaand(m, cfg).controles.filter((c) => c.id !== id) }));
+    setTeVerwijderen(null);
   }
 
-  async function kopieerVorigeMaand() {
-    const vorige = await haalDocument<LeveranciersMaand>(actieveLocatieId!, "leveranciers-maand", maandSleutel(verschuifMaand(maand, -1)));
-    if (!vorige) return;
-    // Vult alleen aan wat nog leeg is; ingevulde beoordelingen van deze maand blijven staan.
-    const samengevoegd = { ...vorige.beoordelingen, ...beoordelingen };
-    await bewaarDocument(actieveLocatieId!, "leveranciers-maand", maandSleutel(maand), { beoordelingen: samengevoegd });
+  /** Nieuwe controle voor de gekozen leverancier; een nieuwe naam komt ook in de leverancierslijst. */
+  function voegControleToe(naam: string) {
+    const bijgewerkt = metLeverancier(cfg, naam);
+    // Eén keer berekend en zo opgeslagen: metLeverancier maakt bij elke aanroep een nieuw id.
+    if (bijgewerkt !== cfg) config.wijzig(() => bijgewerkt);
+    const lev = zoekLeverancier(bijgewerkt.leveranciers, naam);
+    if (!lev) return;
+    const controle: LeverancierControle = {
+      id: nieuweId(),
+      leverancierId: lev.id,
+      leverancierNaam: lev.naam,
+      datum: werkdatumVan(new Date()),
+      product: "",
+      certificaat: null,
+      verloopdatum: "",
+      betrouwbaarheid: null,
+      opmerking: "",
+      conclusie: null,
+    };
+    dezeMaand.wijzig((m) => ({ controles: [...normaliseerMaand(m, cfg).controles, controle] }));
+    setKiest(null);
+    // Scrollt naar de nieuwe kaart, ook als de gebruiker onderaan de pagina begon.
+    window.setTimeout(() => document.getElementById(`controle-${controle.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   }
 
-  const maakPdf = () => maakLeveranciersPdf(pdfBron, maand, config.waarde!, dezeMaand.waarde!);
+  const zoekerKaart = (
+    <Kaart>
+      <LeverancierZoeker leveranciers={cfg.leveranciers} onKies={voegControleToe} />
+      <div style={{ marginTop: "var(--ruimte-s)" }}>
+        <Knop variant="tekst" onClick={() => setKiest(null)}>
+          {t.algemeen.annuleren}
+        </Knop>
+      </div>
+    </Kaart>
+  );
 
-  const beoordeeld = lijst.filter((l) => beoordelingen[l.id]?.conclusie).length;
+  const maakPdf = () => maakLeveranciersPdf(pdfBron, maand, { controles });
 
   return (
     <div className="app-scherm">
@@ -73,7 +98,7 @@ export function LeveranciersScherm() {
       <div className="app-inhoud">
         <PeriodeKiezer
           titel={maandLabel(maand)}
-          ondertitel={t.leveranciers.voortgang(beoordeeld, lijst.length)}
+          ondertitel={t.leveranciers.aantalControles(controles.length)}
           onVorige={() => setMaand(verschuifMaand(maand, -1))}
           onVolgende={() => setMaand(verschuifMaand(maand, 1))}
           onNu={() => setMaand(verschuifMaand(new Date(), 0))}
@@ -81,30 +106,33 @@ export function LeveranciersScherm() {
         />
 
         <div className="werkbalk">
-          <Knop variant="secundair" onClick={kopieerVorigeMaand}>
-            {t.leveranciers.kopieerVorige}
+          <Knop onClick={() => setKiest("boven")} disabled={!!kiest}>
+            + {t.leveranciers.controleToevoegen}
           </Knop>
-          <Knop onClick={() => setPdfOpen(true)}>{t.algemeen.pdfMaken}</Knop>
+          <Knop variant="secundair" onClick={() => setPdfOpen(true)}>
+            {t.algemeen.pdfMaken}
+          </Knop>
           <Link to="/leveranciers/lijst" className="knop knop--secundair">
             {t.leverancierslijst.titel}
           </Link>
         </div>
 
-        {lijst.length === 0 ? (
+        {kiest === "boven" ? zoekerKaart : null}
+
+        {controles.length === 0 && !kiest ? (
           <Kaart>
-            <p className="leeg-melding">{t.leveranciers.geenLeveranciers}</p>
+            <p className="leeg-melding">{t.leveranciers.geenControles}</p>
           </Kaart>
         ) : null}
 
         <div className="kaartlijst">
-          {lijst.map((l) => {
-            const b = { ...LEEG, ...beoordelingen[l.id] };
-            const dagen = b.verloopdatum ? dagenTot(b.verloopdatum) : null;
+          {controles.map((c) => {
+            const dagen = c.verloopdatum ? dagenTot(c.verloopdatum) : null;
             return (
-              <Kaart key={l.id}>
+              <div key={c.id} id={`controle-${c.id}`} style={{ scrollMarginTop: "1rem" }}>
+              <Kaart>
                 <div className="kaart-kop">
-                  <h3>{l.naam}</h3>
-                  {l.gearchiveerd ? <span className="tekst-zwak">{t.leverancierslijst.gearchiveerd}</span> : null}
+                  <h3>{c.leverancierNaam}</h3>
                   {dagen !== null && dagen < 0 ? (
                     <span className="afwijking-badge">⚠ {t.leveranciers.verlopen}</span>
                   ) : dagen !== null && dagen <= 30 ? (
@@ -112,18 +140,23 @@ export function LeveranciersScherm() {
                   ) : null}
                 </div>
                 <div className="veldenraster">
+                  <div className="veld">
+                    <span className="invoerveld-label">{t.leveranciers.datumControle}</span>
+                    <DatumBlad waarde={c.datum} onWijzig={(d) => zet(c.id, { datum: d })} leegLabel={t.algemeen.kiesDatum} titel={t.leveranciers.datumControle} />
+                  </div>
+                  <Invoerveld id={`lev-prod-${c.id}`} label={t.leveranciers.product} value={c.product} onChange={(e) => zet(c.id, { product: e.target.value })} />
                   <Segmentknop
                     label={t.leveranciers.certificaat}
                     opties={[
                       { waarde: "ja", label: t.algemeen.ja },
                       { waarde: "nee", label: t.algemeen.nee },
                     ]}
-                    waarde={b.certificaat === null ? null : b.certificaat ? "ja" : "nee"}
-                    onWijzig={(w) => zet(l.id, { certificaat: w === null ? null : w === "ja" })}
+                    waarde={c.certificaat === null ? null : c.certificaat ? "ja" : "nee"}
+                    onWijzig={(w) => zet(c.id, { certificaat: w === null ? null : w === "ja" })}
                   />
-                  <div>
+                  <div className="veld">
                     <span className="invoerveld-label">{t.leveranciers.verloopdatum}</span>
-                    <DatumBlad waarde={b.verloopdatum} onWijzig={(d) => zet(l.id, { verloopdatum: d })} leegLabel={t.algemeen.kiesDatum} titel={t.leveranciers.verloopTitel(l.naam)} />
+                    <DatumBlad waarde={c.verloopdatum} onWijzig={(d) => zet(c.id, { verloopdatum: d })} leegLabel={t.algemeen.kiesDatum} titel={t.leveranciers.verloopTitel(c.leverancierNaam)} />
                   </div>
                   <Segmentknop<Betrouwbaarheid>
                     label={t.leveranciers.betrouwbaarheid}
@@ -132,8 +165,8 @@ export function LeveranciersScherm() {
                       { waarde: "matig", label: t.leveranciers.matig },
                       { waarde: "slecht", label: t.leveranciers.slecht },
                     ]}
-                    waarde={b.betrouwbaarheid}
-                    onWijzig={(w) => zet(l.id, { betrouwbaarheid: w })}
+                    waarde={c.betrouwbaarheid}
+                    onWijzig={(w) => zet(c.id, { betrouwbaarheid: w })}
                   />
                   <Segmentknop<Conclusie>
                     label={t.leveranciers.conclusie}
@@ -142,48 +175,35 @@ export function LeveranciersScherm() {
                       { waarde: "voorwaardelijk", label: t.leveranciers.voorwaardelijk },
                       { waarde: "afgekeurd", label: t.leveranciers.afgekeurd },
                     ]}
-                    waarde={b.conclusie}
-                    onWijzig={(w) => zet(l.id, { conclusie: w })}
+                    waarde={c.conclusie}
+                    onWijzig={(w) => zet(c.id, { conclusie: w })}
                   />
                 </div>
                 <div style={{ marginTop: "var(--ruimte-m)" }}>
-                  <Tekstveld id={`lev-opm-${l.id}`} label={t.leveranciers.opmerking} value={b.opmerking} onChange={(e) => zet(l.id, { opmerking: e.target.value })} />
+                  <Tekstveld id={`lev-opm-${c.id}`} label={t.leveranciers.opmerking} value={c.opmerking} onChange={(e) => zet(c.id, { opmerking: e.target.value })} />
                 </div>
-                <div style={{ marginTop: "var(--ruimte-s)" }}>
-                  <Knop
-                    variant="tekst"
-                    onClick={() => {
-                      if (window.confirm(t.leveranciers.archiveerBevestiging(l.naam)))
-                        config.wijzig((c) => ({ ...c, leveranciers: c.leveranciers.map((x) => (x.id === l.id ? { ...x, gearchiveerd: true } : x)) }));
-                    }}
-                  >
-                    {t.leveranciers.archiveren}
+                <div style={{ marginTop: "var(--ruimte-s)", display: "flex", gap: "var(--ruimte-s)", flexWrap: "wrap" }}>
+                  <Knop variant="gevaar" onClick={() => setTeVerwijderen(c)}>
+                    {t.algemeen.verwijderen}
                   </Knop>
+                  {/* Alles wordt al automatisch bewaard; deze knop geeft de gebruiker de bevestiging daarvan. */}
+                  <Knop onClick={() => toon(t.algemeen.opgeslagen)}>{t.algemeen.opslaan}</Knop>
                 </div>
               </Kaart>
+              </div>
             );
           })}
         </div>
 
-        <Kaart style={{ marginTop: "var(--ruimte-m)" }}>
-          <form
-            className="veldenraster"
-            onSubmit={(e) => {
-              e.preventDefault();
-              voegToe();
-            }}
-          >
-            <Invoerveld id="nieuwe-leverancier" label={t.leveranciers.nieuweLeverancier} list="leveranciers-alle" autoComplete="off" value={nieuweNaam} onChange={(e) => setNieuweNaam(e.target.value)} />
-            <datalist id="leveranciers-alle">
-              {alleNamen.map((l) => (
-                <option key={l.id} value={l.naam} />
-              ))}
-            </datalist>
-            <Knop type="submit" disabled={!nieuweNaam.trim()}>
-              + {t.leveranciers.toevoegen}
+        {kiest === "onder" ? zoekerKaart : null}
+        {controles.length > 0 ? (
+          <div className="werkbalk">
+            <Knop onClick={() => setKiest("onder")} disabled={!!kiest}>
+              + {t.leveranciers.controleToevoegen}
             </Knop>
-          </form>
-        </Kaart>
+          </div>
+        ) : null}
+
         <p className="tekst-zwak" style={{ textAlign: "center" }}>
           {t.leveranciers.versiedatum}
         </p>
@@ -195,6 +215,14 @@ export function LeveranciersScherm() {
         bestandsnaam={pdfBestandsnaam(pdfBron, "leveranciers", maandSleutel(maand))}
         titel={`${t.leveranciers.titel} ${maandLabel(maand)}`}
       />
+      <BevestigBlad
+        open={!!teVerwijderen}
+        titel={t.leveranciers.verwijderTitel}
+        uitleg={teVerwijderen ? t.leveranciers.verwijderUitleg(teVerwijderen.leverancierNaam) : ""}
+        onBevestig={() => teVerwijderen && verwijder(teVerwijderen.id)}
+        onSluit={() => setTeVerwijderen(null)}
+      />
+      {toast}
       <HoofdNavigatie />
     </div>
   );

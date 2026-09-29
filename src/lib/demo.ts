@@ -157,11 +157,19 @@ export async function zaaiDemoData(): Promise<void> {
     conclusie,
   });
   const dag = 86400000;
+  const controle = (i: number, dagenTerug: number, product: string, b: LeverancierBeoordeling) => ({
+    ...b,
+    id: nieuweId(),
+    leverancierId: leveranciers[i].id,
+    leverancierNaam: leveranciers[i].naam,
+    datum: werkdatumVan(new Date(nu.getTime() - dagenTerug * dag)),
+    product,
+  });
   const leverancierMaand: LeveranciersMaand = {
-    beoordelingen: {
-      [leveranciers[0].id]: beoordeling(new Date(nu.getTime() + 300 * dag), "goed", "goedgekeurd"),
-      [leveranciers[1].id]: beoordeling(new Date(nu.getTime() + 12 * dag), "matig", "voorwaardelijk"), // laat de "verloopt binnenkort"-waarschuwing zien
-    },
+    controles: [
+      controle(0, 0, t.demo.product1, beoordeling(new Date(nu.getTime() + 300 * dag), "goed", "goedgekeurd")),
+      controle(1, 1, t.demo.product2, beoordeling(new Date(nu.getTime() + 12 * dag), "matig", "voorwaardelijk")), // laat de "verloopt binnenkort"-waarschuwing zien
+    ],
   };
 
   for (const l of [centrum, noord]) {

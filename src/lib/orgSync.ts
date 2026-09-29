@@ -10,7 +10,7 @@ import type { Organisatie, Profiel } from "../types/domain";
 export async function verstuurOrganisatieEnProfiel(organisatie: Organisatie, profiel: Profiel): Promise<string | null> {
   if (!supabase || !navigator.onLine) return null;
 
-  const { error: orgFout } = await supabase.from("organisaties").upsert({
+  const { id, ...gegevens } = {
     id: organisatie.id,
     naam: organisatie.naam,
     adres: organisatie.adres,
@@ -23,8 +23,17 @@ export async function verstuurOrganisatieEnProfiel(organisatie: Organisatie, pro
     post_adres: organisatie.postAdres,
     post_postcode: organisatie.postPostcode,
     post_plaats: organisatie.postPlaats,
-  });
-  if (orgFout) return orgFout.message;
+  };
+  // Bewust géén upsert: bij INSERT … ON CONFLICT DO UPDATE toetst Postgres de nieuwe rij ook aan de
+  // SELECT-policy ("eigen organisatie"), en die geldt pas ná het aanmaken van het profiel. Het
+  // eerste versturen faalde daardoor met "new row violates row-level security policy".
+  // Dus: eerst aanmaken; bestaat hij al (23505), dan bijwerken.
+  const { error: orgFout } = await supabase.from("organisaties").insert({ id, ...gegevens });
+  if (orgFout) {
+    if (orgFout.code !== "23505") return orgFout.message;
+    const { error: bijwerkFout } = await supabase.from("organisaties").update(gegevens).eq("id", id);
+    if (bijwerkFout) return bijwerkFout.message;
+  }
 
   const { error: profielFout } = await supabase.from("profielen").upsert({
     id: profiel.id,

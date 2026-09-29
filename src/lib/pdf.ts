@@ -3,7 +3,6 @@ import autoTable, { type RowInput } from "jspdf-autotable";
 import logoDataUrl from "../assets/visdetailhandel-logo.jpg?inline";
 import type { PdfBron } from "../context/LocatieContext";
 import type {
-  LeveranciersConfig,
   LeveranciersMaand,
   SchoonmaakConfig,
   SchoonmaakMaand,
@@ -203,11 +202,12 @@ export function maakSchoonmaakplanPdf(
   return doc.output("blob");
 }
 
-export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: Weekformulier): Blob {
+export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: Weekformulier, verborgen: ReadonlySet<string>): Blob {
   const { titel, periode } = weekLabel(maandag);
   const { doc, tabel, eindY, kopje } = nieuwDocument("landscape", bron, t.pdf.weekformulier, `${titel} (${periode})`);
   const w = t.weekformulier;
   const afwijkingStijl = { fontStyle: "bold" as const, textColor: [138, 31, 43] as [number, number, number] };
+  const nvtCel = { content: t.pdf.nvt, colSpan: 6, styles: { fontStyle: "italic" as const } };
 
   let y = kopje(t.pdf.ontvangst, 92);
   tabel({
@@ -223,6 +223,7 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
     startY: y,
     head: [[w.kolOpslag, w.kolNorm, w.datum, t.pdf.kolTemp, t.pdf.kolAfgedekt, t.pdf.kolFifo, w.paraaf, w.actie]],
     body: OPSLAG_EENHEDEN.map((e) => {
+      if (verborgen.has(e.id)) return [e.naam, pdfTekst(grensTekst(e)), nvtCel];
       const r = formulier.opslag[e.id];
       const afwijking = r ? opslagAfwijking(e, r.temperatuur) : false;
       return [
@@ -230,8 +231,8 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
         pdfTekst(grensTekst(e)),
         datumKort(r?.datum ?? ""),
         { content: (r?.temperatuur ?? "") + (afwijking ? `  (${t.pdf.afwijkingHoofdletters})` : ""), styles: afwijking ? afwijkingStijl : {} },
-        e.afgedektNvt ? w.nvt : voTekst(r?.afgedekt ?? null),
-        voTekst(r?.fifoTht ?? null),
+        e.soort === "friteuse" ? (r?.olieVerversOp ? w.olieVerversPdf(datumKort(r.olieVerversOp)) : "") : e.afgedektNvt ? w.nvt : voTekst(r?.afgedekt ?? null),
+        e.soort === "friteuse" ? "-" : voTekst(r?.fifoTht ?? null),
         r?.paraaf ?? "",
         r?.actie ?? "",
       ];
@@ -243,6 +244,7 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
     startY: y,
     head: [[w.kolProces, w.kolNorm, w.datum, w.product, w.kolWaarde, w.kolMinuten, w.paraaf, w.actie]],
     body: CCP_PROCESSEN.map((p) => {
+      if (verborgen.has(p.id)) return [p.naam, pdfTekst(p.grensTekst), nvtCel];
       const r = formulier.ccps[p.id];
       const afwijking = ccpAfwijking(p, r);
       return [
@@ -273,29 +275,30 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
   return doc.output("blob");
 }
 
-export function maakLeveranciersPdf(bron: PdfBron, maand: Date, config: LeveranciersConfig, maandDoc: LeveranciersMaand): Blob {
+export function maakLeveranciersPdf(bron: PdfBron, maand: Date, maandDoc: LeveranciersMaand): Blob {
   const { doc, tabel } = nieuwDocument("landscape", bron, t.pdf.leveranciers, maandLabel(maand));
   const l = t.leveranciers;
   const betrouwbaarheid = { goed: l.goed, matig: l.matig, slecht: l.slecht } as const;
   const conclusie = { goedgekeurd: l.goedgekeurd, voorwaardelijk: l.voorwaardelijk, afgekeurd: l.afgekeurd } as const;
 
+  // Op datum, oudste bovenaan (zoals een papieren logboek).
+  const controles = [...maandDoc.controles].sort((a, b) => a.datum.localeCompare(b.datum));
   tabel({
     startY: 92,
-    head: [[l.kolLeverancier, t.pdf.kolCertificaat, t.pdf.kolVerloop, t.pdf.kolBetrouwbaarheid, t.pdf.kolOpmerking, t.pdf.kolConclusie]],
-    body: config.leveranciers
-      .filter((lev) => !lev.gearchiveerd || maandDoc.beoordelingen[lev.id])
-      .map((lev) => {
-        const b = maandDoc.beoordelingen[lev.id];
-        return [
-          lev.naam,
-          b?.certificaat === true ? t.algemeen.ja : b?.certificaat === false ? t.algemeen.nee : "",
-          datumKort(b?.verloopdatum ?? ""),
-          b?.betrouwbaarheid ? betrouwbaarheid[b.betrouwbaarheid] : "",
-          b?.opmerking ?? "",
-          b?.conclusie ? conclusie[b.conclusie] : "",
-        ];
-      }),
-    columnStyles: { 0: { fontStyle: "bold" } },
+    head: [[t.weekformulier.datum, l.kolLeverancier, t.pdf.kolProduct, t.pdf.kolCertificaat, t.pdf.kolVerloop, t.pdf.kolBetrouwbaarheid, t.pdf.kolOpmerking, t.pdf.kolConclusie]],
+    body: controles.length
+      ? controles.map((c) => [
+          datumKort(c.datum),
+          c.leverancierNaam,
+          c.product,
+          c.certificaat === true ? t.algemeen.ja : c.certificaat === false ? t.algemeen.nee : "",
+          datumKort(c.verloopdatum),
+          c.betrouwbaarheid ? betrouwbaarheid[c.betrouwbaarheid] : "",
+          c.opmerking,
+          c.conclusie ? conclusie[c.conclusie] : "",
+        ])
+      : [[{ content: l.geenControles, colSpan: 8, styles: { fontStyle: "italic" as const } }]],
+    columnStyles: { 1: { fontStyle: "bold" } },
   });
   doc.setFontSize(8);
   doc.setTextColor(90, 90, 90);

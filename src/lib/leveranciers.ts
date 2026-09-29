@@ -1,5 +1,5 @@
 import { nieuweId } from "./id";
-import type { Leverancier, LeveranciersConfig } from "../types/domain";
+import type { Leverancier, LeveranciersConfig, LeveranciersMaand } from "../types/domain";
 
 /** Alleen voor vergelijken: "  Vis  Groothandel " en "vis groothandel" zijn dezelfde leverancier. */
 export function normaliseer(naam: string): string {
@@ -50,4 +50,27 @@ export function verwijder(config: LeveranciersConfig, id: string): LeveranciersC
 
 export function sorteerOpNaam(lijst: Leverancier[]): Leverancier[] {
   return [...lijst].sort((a, b) => a.naam.localeCompare(b.naam, undefined, { sensitivity: "base" }));
+}
+
+export const LEGE_MAAND: LeveranciersMaand = { controles: [] };
+
+/**
+ * Zet een maand in het oude formaat (één beoordeling per leverancier) om naar
+ * controles, zodat eerder ingevulde maanden zichtbaar blijven. Zonder bekende
+ * leverancier blijft de beoordeling niet leesbaar en wordt hij overgeslagen.
+ */
+export function normaliseerMaand(maand: LeveranciersMaand, config: LeveranciersConfig): LeveranciersMaand {
+  const oud = Object.entries(maand.beoordelingen ?? {}).flatMap(([leverancierId, b]) => {
+    const lev = config.leveranciers.find((l) => l.id === leverancierId);
+    return lev ? [{ ...b, id: `oud-${leverancierId}`, leverancierId, leverancierNaam: lev.naam, datum: "", product: "" }] : [];
+  });
+  return { controles: [...(maand.controles ?? []), ...oud] };
+}
+
+/** Oudste controle eerst (zoals het logboek en de pdf), zodat een nieuwe controle onderaan komt, bij de knop. */
+export function sorteerControles<T extends { datum: string }>(controles: T[]): T[] {
+  return controles
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => (a.c.datum || "").localeCompare(b.c.datum || "") || a.i - b.i)
+    .map(({ c }) => c);
 }

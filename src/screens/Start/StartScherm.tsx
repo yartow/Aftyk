@@ -10,9 +10,9 @@ import { Blad } from "../../components/Blad";
 import { useLocatie } from "../../context/LocatieContext";
 import { documentId } from "../../lib/documenten";
 import { maandagVan, maandLabel, maandSleutel, weekSleutel } from "../../lib/kalender";
-import { CCP_PROCESSEN, OPSLAG_EENHEDEN, ccpAfwijking, opslagAfwijking } from "../../lib/weekformulierDefaults";
+import { CCP_PROCESSEN, OPSLAG_EENHEDEN, ccpAfwijking, opslagAfwijking, standaardWeekformulierConfig } from "../../lib/weekformulierDefaults";
 import { t, formatteerDatumLang } from "../../i18n";
-import type { LeveranciersConfig, LeveranciersMaand, SchoonmaakWeek, Weekformulier } from "../../types/domain";
+import type { LeveranciersConfig, LeveranciersMaand, SchoonmaakWeek, Weekformulier, WeekformulierConfig } from "../../types/domain";
 import "./Start.css";
 import "../Schoonmaakplan/Schoonmaakplan.css";
 
@@ -26,12 +26,14 @@ export function StartScherm() {
   const maand = maandSleutel(nu);
 
   const status = useLiveQuery(async () => {
-    const [sp, wf, lc, lm] = await Promise.all([
+    const [sp, wf, lc, lm, wc] = await Promise.all([
       db.documenten.get(documentId("schoonmaak-week", actieveLocatieId ?? "", week)),
       db.documenten.get(documentId("weekformulier", actieveLocatieId ?? "", week)),
       db.documenten.get(documentId("leveranciers-config", actieveLocatieId ?? "", "config")),
       db.documenten.get(documentId("leveranciers-maand", actieveLocatieId ?? "", maand)),
+      db.documenten.get(documentId("weekformulier-config", actieveLocatieId ?? "", "config")),
     ]);
+    const verborgen = new Set(((wc?.inhoud as WeekformulierConfig | undefined) ?? standaardWeekformulierConfig()).verborgen);
 
     const afgevinkt = Object.values((sp?.inhoud as SchoonmaakWeek | undefined)?.dagen ?? {}).reduce(
       (som, dagen) => som + dagen.filter(Boolean).length,
@@ -40,17 +42,18 @@ export function StartScherm() {
 
     const f = wf?.inhoud as Weekformulier | undefined;
     const afwijkingen = f
-      ? OPSLAG_EENHEDEN.filter((e) => opslagAfwijking(e, f.opslag[e.id]?.temperatuur ?? "")).length +
-        CCP_PROCESSEN.filter((p) => ccpAfwijking(p, f.ccps[p.id])).length +
+      ? OPSLAG_EENHEDEN.filter((e) => !verborgen.has(e.id) && opslagAfwijking(e, f.opslag[e.id]?.temperatuur ?? "")).length +
+        CCP_PROCESSEN.filter((p) => !verborgen.has(p.id) && ccpAfwijking(p, f.ccps[p.id])).length +
         f.ontvangst.length
       : 0;
     const ingevuld = !!f && (f.ontvangst.length > 0 || Object.keys(f.opslag).length > 0 || Object.keys(f.ccps).length > 0);
 
     const lijst = ((lc?.inhoud as LeveranciersConfig | undefined)?.leveranciers ?? []).filter((l) => !l.gearchiveerd);
-    const beoordelingen = (lm?.inhoud as LeveranciersMaand | undefined)?.beoordelingen ?? {};
-    const beoordeeld = lijst.filter((l) => beoordelingen[l.id]?.conclusie).length;
+    const maandDoc = lm?.inhoud as LeveranciersMaand | undefined;
+    // Ook maanden in het oude formaat (één beoordeling per leverancier) tellen mee.
+    const controles = (maandDoc?.controles?.length ?? 0) + Object.keys(maandDoc?.beoordelingen ?? {}).length;
 
-    return { afgevinkt, afwijkingen, ingevuld, totaal: lijst.length, beoordeeld };
+    return { afgevinkt, afwijkingen, ingevuld, totaal: lijst.length, controles };
   }, [week, maand, actieveLocatieId]);
 
   return (
@@ -102,7 +105,7 @@ export function StartScherm() {
               <span className="start-icoon" aria-hidden="true">🚚</span>
               <span className="start-tekst">
                 <strong>{t.start.leveranciers}</strong>
-                <span className="tekst-zwak">{status ? t.start.leveranciersStatus(maandLabel(nu), status.beoordeeld, status.totaal) : ""}</span>
+                <span className="tekst-zwak">{status ? t.start.leveranciersStatus(maandLabel(nu), status.controles) : ""}</span>
               </span>
               <span aria-hidden="true" className="start-pijl">›</span>
             </Kaart>

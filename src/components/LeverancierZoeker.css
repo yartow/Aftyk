@@ -1,0 +1,26 @@
+.lev-zoeker-lijst {
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  border: 0.125rem solid var(--kleur-rand);
+  border-radius: var(--radius);
+  background: var(--kleur-oppervlak);
+  overflow: hidden;
+}
+
+.lev-zoeker-lijst li + li { border-top: 0.0625rem solid var(--kleur-rand); }
+
+.lev-zoeker-lijst button {
+  display: block;
+  width: 100%;
+  min-height: var(--raakdoel-min);
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lev-zoeker-nieuw { font-weight: 600; }

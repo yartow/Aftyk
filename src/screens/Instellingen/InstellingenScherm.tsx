@@ -13,26 +13,31 @@ import { useAuth } from "../../context/AuthContext";
 import { useLocatie } from "../../context/LocatieContext";
 import { synchroniseerNu } from "../../lib/sync";
 import { maakBackupBestand, herstelBackupBestand } from "../../lib/backup";
-import { zetPincode, schakelPincodeUit, pincodeIsIngeschakeld } from "../../lib/pin";
+import { zetPincode } from "../../lib/pin";
+import { VERGRENDEL_OPTIES, haalVergrendelMinuten, zetVergrendelMinuten } from "../../lib/vergrendeling";
+import { Segmentknop } from "../../components/Segmentknop";
+import { useWeekformulierConfig } from "../../lib/weekformulierConfig";
+import { CCP_PROCESSEN, OPSLAG_EENHEDEN } from "../../lib/weekformulierDefaults";
 import { t, type Taal } from "../../i18n";
 import type { Tekstgrootte, Thema } from "../../types/domain";
 
 export function InstellingenScherm() {
   const navigate = useNavigate();
   const { tekstgrootte, thema, taal, zetTekstgrootte, zetThema, zetTaal } = useInstellingen();
-  const { organisatie, profiel, modus, sessie, logUit } = useAuth();
+  const { organisatie, profiel, modus, sessie, logUit, vergrendel } = useAuth();
   const [verwijderSoort, setVerwijderSoort] = useState<"lokaal" | "online" | null>(null);
   const demo = isDemo();
   const { actieveLocatie } = useLocatie();
+  const { verborgen, zetVerborgen } = useWeekformulierConfig();
 
   const [pincodeStap, setPincodeStap] = useState<"uit" | "invoeren" | "herhalen">("uit");
   const [nieuwePincode, setNieuwePincode] = useState("");
   const [eerstePincode, setEerstePincode] = useState("");
-  const [pincodeAan, setPincodeAan] = useState(false);
+  const [vergrendelMinuten, setVergrendelMinuten] = useState(5);
   const [pincodeFout, setPincodeFout] = useState(false);
 
   useEffect(() => {
-    void pincodeIsIngeschakeld().then(setPincodeAan);
+    void haalVergrendelMinuten().then(setVergrendelMinuten);
   }, []);
   const [syncBericht, setSyncBericht] = useState<string | null>(null);
   const [syncBezig, setSyncBezig] = useState(false);
@@ -69,7 +74,6 @@ export function InstellingenScherm() {
       setPincodeStap("herhalen");
     } else if (waarde === eerstePincode) {
       await zetPincode(waarde);
-      setPincodeAan(true);
       setPincodeStap("uit");
       setNieuwePincode("");
       setEerstePincode("");
@@ -161,23 +165,54 @@ export function InstellingenScherm() {
             ) : (
               <div style={{ display: "flex", gap: "var(--ruimte-s)", flexWrap: "wrap" }}>
                 <Knop variant="secundair" onClick={() => setPincodeStap("invoeren")}>
-                  {pincodeAan ? t.instellingen.pincodeWijzigen : t.instellingen.pincodeInschakelen}
+                  {t.instellingen.pincodeWijzigen}
                 </Knop>
-                {pincodeAan ? (
-                  <Knop
-                    variant="secundair"
-                    onClick={async () => {
-                      await schakelPincodeUit();
-                      setPincodeAan(false);
-                    }}
-                  >
-                    {t.instellingen.pincodeUitschakelen}
-                  </Knop>
-                ) : null}
+                <Knop variant="secundair" onClick={vergrendel}>
+                  {t.instellingen.vergrendelNu}
+                </Knop>
               </div>
             )}
+            {pincodeStap === "uit" ? (
+              <div style={{ marginTop: "var(--ruimte-m)" }}>
+                <Segmentknop<string>
+                  label={t.instellingen.vergrendelNa}
+                  opties={VERGRENDEL_OPTIES.map((m) => ({ waarde: String(m), label: t.instellingen.vergrendelMinuten(m) }))}
+                  waarde={String(vergrendelMinuten)}
+                  leegmaken={false}
+                  onWijzig={(w) => {
+                    if (!w) return;
+                    setVergrendelMinuten(Number(w));
+                    void zetVergrendelMinuten(Number(w));
+                  }}
+                />
+              </div>
+            ) : null}
           </Kaart>
         </section>
+
+        {verborgen ? (
+          <section>
+            <h2>{t.weekformulier.verborgenInstellingenTitel}</h2>
+            <Kaart style={{ display: "flex", flexDirection: "column", gap: "var(--ruimte-m)" }}>
+              <p className="tekst-zwak" style={{ margin: 0 }}>
+                {t.weekformulier.verborgenInstellingenUitleg}
+              </p>
+              {[...OPSLAG_EENHEDEN, ...CCP_PROCESSEN].map((punt) => (
+                <Segmentknop<"zichtbaar" | "verborgen">
+                  key={punt.id}
+                  label={punt.naam}
+                  leegmaken={false}
+                  opties={[
+                    { waarde: "zichtbaar", label: t.weekformulier.zichtbaar },
+                    { waarde: "verborgen", label: t.weekformulier.verborgen },
+                  ]}
+                  waarde={verborgen.has(punt.id) ? "verborgen" : "zichtbaar"}
+                  onWijzig={(w) => w && zetVerborgen(punt.id, w === "verborgen")}
+                />
+              ))}
+            </Kaart>
+          </section>
+        ) : null}
 
         {modus === "supabase" ? (
           <section>

@@ -16,7 +16,8 @@ import { LocatiesScherm } from "./screens/Locaties/LocatiesScherm";
 import { LeveranciersScherm } from "./screens/Leveranciers/LeveranciersScherm";
 import { LeverancierslijstScherm } from "./screens/Leveranciers/LeverancierslijstScherm";
 import { InstellingenScherm } from "./screens/Instellingen/InstellingenScherm";
-import { inrichtingIsOvergeslagen } from "./lib/inrichting";
+import { useAutomatischVergrendelen } from "./lib/useAutomatischVergrendelen";
+import { PincodeInstellenScherm } from "./screens/Pincode/PincodeInstellenScherm";
 import { Knop } from "./components/Knop";
 import { t } from "./i18n";
 import { DemoBanner } from "./components/DemoBanner";
@@ -27,14 +28,17 @@ import { BijwerkMelding } from "./components/BijwerkMelding";
  * het juiste scherm. Volgorde is belangrijk:
  * 1. wachtwoord-reset-link werkt altijd (komt zelf al met een sessie mee)
  * 2. zonder Supabase-sessie (indien gekoppeld) → inloggen
- * 3. zonder bedrijfsgegevens → eenmalige inrichting
+ * 3. zonder pincode op dit apparaat → pincode instellen (verplicht)
  * 4. vergrendeld door pincode → pincodescherm
- * 5. verder → de eigenlijke app
+ * 5. zonder bedrijfsgegevens → eenmalige inrichting (mag worden overgeslagen)
+ * 6. verder → de eigenlijke app
  */
 function Poortwachter({ children }: { children: ReactNode }) {
-  const { klaar, modus, sessie, organisatie, vergrendeldDoorPincode, accountLaadFout, probeerAccountOpnieuw, logUit } = useAuth();
+  const { klaar, modus, sessie, organisatie, vergrendeldDoorPincode, pincodeIngesteld, inrichtingOvergeslagen, vergrendel, accountLaadFout, probeerAccountOpnieuw, logUit } = useAuth();
   const { klaar: instellingenKlaar } = useInstellingen();
   const locatie = useLocation();
+  const ingelogd = modus === "lokaal" || !!sessie;
+  useAutomatischVergrendelen(klaar && ingelogd && pincodeIngesteld && !vergrendeldDoorPincode, vergrendel);
 
   if (!klaar || !instellingenKlaar) return null;
 
@@ -64,9 +68,10 @@ function Poortwachter({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!organisatie && !inrichtingIsOvergeslagen()) {
-    if (locatie.pathname === "/inrichten") return <>{children}</>;
-    return <Navigate to="/inrichten" replace />;
+  // Pincode is verplicht en per apparaat; zonder pincode kan niets anders.
+  if (!pincodeIngesteld) {
+    if (locatie.pathname === "/pincode-instellen") return <>{children}</>;
+    return <Navigate to="/pincode-instellen" replace />;
   }
 
   if (vergrendeldDoorPincode) {
@@ -74,10 +79,15 @@ function Poortwachter({ children }: { children: ReactNode }) {
     return <Navigate to="/pincode" replace />;
   }
 
+  if (!organisatie && !inrichtingOvergeslagen) {
+    if (locatie.pathname === "/inrichten") return <>{children}</>;
+    return <Navigate to="/inrichten" replace />;
+  }
+
   // Zonder bedrijfsgegevens (overgeslagen) blijft /inrichten bereikbaar om alsnog in te vullen.
   if (!organisatie && locatie.pathname === "/inrichten") return <>{children}</>;
 
-  if (["/inloggen", "/wachtwoord-vergeten", "/aanmelden", "/inrichten", "/pincode"].includes(locatie.pathname)) {
+  if (["/inloggen", "/wachtwoord-vergeten", "/aanmelden", "/inrichten", "/pincode", "/pincode-instellen"].includes(locatie.pathname)) {
     return <Navigate to="/" replace />;
   }
 
@@ -95,6 +105,7 @@ function Schermen() {
         <Route path="/nieuw-wachtwoord" element={<NieuwWachtwoordScherm />} />
         <Route path="/inrichten" element={<BedrijfsgegevensScherm />} />
         <Route path="/pincode" element={<PincodeScherm />} />
+        <Route path="/pincode-instellen" element={<PincodeInstellenScherm />} />
 
         <Route path="/schoonmaakplan" element={<SchoonmaakplanScherm />} />
         <Route path="/weekformulier" element={<WeekformulierScherm />} />

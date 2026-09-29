@@ -1,0 +1,1 @@
+select maak_toegangscode();
