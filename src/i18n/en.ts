@@ -5,6 +5,7 @@ export const en: Vertaling = {
   algemeen: {
     appNaam: "Hygiene Code",
     opslaan: "Save",
+    opgeslagen: "Your data has been saved",
     annuleren: "Cancel",
     terug: "Back",
     verder: "Continue",
@@ -33,12 +34,16 @@ export const en: Vertaling = {
 
   pincode: {
     titel: "Enter PIN",
-    subtitel: "Ask the owner if you don't know the code.",
     fout: "Wrong PIN, please try again.",
-    vergeten: "Forgot your PIN? Log in with your password.",
+    vergeten: "Forgot your PIN?",
+    vergetenUitleg: "Log in with your password. You will then choose a new PIN.",
+    foutMetPogingen: (n) => `Wrong PIN. You have ${n} ${n === 1 ? "attempt" : "attempts"} left.`,
+    geblokkeerd: "Too many wrong PINs. Log in with your password.",
     vergetenLokaal: "Forgot your PIN? Erase the data on this device.",
     wisBevestiging: "All data, settings and the PIN will be erased from this device and cannot be recovered (unless you have a backup). Continue?",
     wissen: "Delete",
+    instellenTitel: "Choose a PIN",
+    instellenUitleg: "This PIN is required and only applies to this device. On another phone or tablet you may choose a different PIN.",
   },
 
   start: {
@@ -50,8 +55,8 @@ export const en: Vertaling = {
     schoonmaakStatus: (aantal) => (aantal === 0 ? "Nothing ticked off this week yet" : `This week: ${aantal} ticked off`),
     weekformulierStatus: (afwijkingen, ingevuld) =>
       !ingevuld ? "Nothing filled in this week yet" : afwijkingen === 0 ? "This week: no deviations" : `This week: ${afwijkingen} ${afwijkingen === 1 ? "deviation" : "deviations"}`,
-    leveranciersStatus: (maand, beoordeeld, totaal) =>
-      totaal === 0 ? "No suppliers added yet" : `${maand}: ${beoordeeld} of ${totaal} assessed`,
+    leveranciersStatus: (maand, aantal) =>
+      aantal === 0 ? `${maand}: no checks yet` : `${maand}: ${aantal} ${aantal === 1 ? "check" : "checks"}`,
     documenten: "Documents",
   },
 
@@ -163,6 +168,15 @@ export const en: Vertaling = {
     afgedekt: "Products covered",
     nvt: "N/A",
     fifoTht: "FIFO & best-before products",
+    olieVerversOp: "Oil last changed",
+    olieVerversPdf: (datum: string) => `Oil changed: ${datum}`,
+    verbergen: "Hide (n/a)",
+    tonen: "Show again",
+    verborgenTitel: (aantal: number) => `${aantal} hidden (n/a)`,
+    verborgenInstellingenTitel: "Weekly form: hidden items",
+    verborgenInstellingenUitleg: "Hidden items do not appear in the weekly form and are shown as n/a in the PDF.",
+    zichtbaar: "Visible",
+    verborgen: "Hidden",
     phWaarde: "pH value",
     tijdMinuten: "Time (minutes)",
     beoordeeldDoor: "Reviewed by (HACCP officer)",
@@ -177,7 +191,7 @@ export const en: Vertaling = {
     eenheden: {
       koelcel: "Cold room",
       koelkast1: "Refrigerator 1",
-      koelkast2: "Refrigerator 2",
+      koelkast2: "Workbench refrigeration",
       vriescel: "Freezer room",
       vriezer1: "Freezer 1",
       vriezer2: "Freezer 2",
@@ -186,7 +200,7 @@ export const en: Vertaling = {
       warmhoudvitrine: "Hot-holding cabinet",
       koelvitrine: "Chilled display",
       saladiere: "Salad counter",
-      friteuse1: "Deep fryer 1",
+      friteuse1: "Fish fryer",
     },
     processenLijst: {
       verhitten: { naam: "Heating (raw) product", norm: "core temperature ≥ 75 °C" },
@@ -200,13 +214,17 @@ export const en: Vertaling = {
   leveranciers: {
     titel: "Supplier register",
     dezeMaand: "Go to this month",
-    voortgang: (beoordeeld, totaal) => `${beoordeeld} of ${totaal} assessed`,
-    kopieerVorige: "Copy previous month",
-    geenLeveranciers: "No suppliers yet. Add the first one below.",
+    aantalControles: (aantal) => (aantal === 1 ? "1 check" : `${aantal} checks`),
+    controleToevoegen: "Add check",
+    naamLeverancier: "Supplier name",
     nieuweLeverancier: "New supplier name",
-    toevoegen: "Add supplier",
-    archiveren: "Archive supplier",
-    archiveerBevestiging: (naam) => `Archive ${naam}? Months already filled in are kept.`,
+    voegNaamToe: (naam) => `Add “${naam}” as a new supplier`,
+    geenControles: "No checks this month yet.",
+    verwijderBevestiging: "Delete this check?",
+    verwijderTitel: "Delete check?",
+    verwijderUitleg: (naam) => `The check for ${naam} will be deleted. This cannot be undone.`,
+    datumControle: "Date of check",
+    product: "Product(s) checked",
     verlopen: "Certificate expired",
     verloptBinnenkort: (dagen) => `Expires in ${dagen} ${dagen === 1 ? "day" : "days"}`,
     certificaat: "Certificate / agreement present",
@@ -264,8 +282,9 @@ export const en: Vertaling = {
     taal: "Taal / Language",
     beveiliging: "Security",
     pincodeWijzigen: "Change PIN",
-    pincodeUitschakelen: "Turn off PIN",
-    pincodeInschakelen: "Turn on PIN",
+    vergrendelNa: "Lock automatically after",
+    vergrendelMinuten: (m: number) => `${m} min`,
+    vergrendelNu: "Lock now",
     pincodeNieuw: "Choose a new PIN",
     pincodeHerhaal: "Enter the PIN once more",
     pincodeNietGelijk: "The two PINs did not match. Start again.",
@@ -286,6 +305,9 @@ export const en: Vertaling = {
     locaties: "Locations",
     account: "Account",
     uitloggen: "Log out",
+    huidigWachtwoord: "Current password",
+    wachtwoordWijzigen: "Change password",
+    wachtwoordOpgeslagen: "Your password has been changed.",
     ingelogdAls: (naam) => `Logged in as ${naam}`,
   },
 
@@ -348,6 +370,8 @@ export const en: Vertaling = {
     leverancier1: "North Sea Fish Wholesale",
     leverancier2: "Fresh Ice Ltd.",
     leverancier3: "Shrimp & More",
+    product1: "Salmon fillet",
+    product2: "Cod",
     afwijkingActie: "Cold room adjusted, measured again after 1 hour: 5 °C.",
   },
 
@@ -379,6 +403,10 @@ export const en: Vertaling = {
   },
 
   auth: {
+    pogingenWaarschuwing: (n) =>
+      `You have ${n} ${n === 1 ? "attempt" : "attempts"} left to enter your password. After that you must reset your password using the link in your e-mail.`,
+    geblokkeerd: "Too many wrong passwords. Reset your password using the link in your e-mail.",
+    resetlinkVersturen: "Send reset link",
     inloggenTitel: "Log in",
     accountLadenMislukt: "Your data could not be loaded",
     accountLadenUitleg: "Check your internet connection and try again. Do not enter the company details again: your company is already online.",
@@ -433,6 +461,7 @@ export const en: Vertaling = {
     makenMislukt: "The PDF could not be created.",
   },
   pdf: {
+    nvt: "n/a",
     schoonmaakplan: "Cleaning schedule",
     weekformulier: "Weekly hygiene form",
     leveranciers: "Certified supplier register",

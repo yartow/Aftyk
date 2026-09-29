@@ -7,6 +7,7 @@ export const nl = {
   algemeen: {
     appNaam: "Hygiënecode",
     opslaan: "Opslaan",
+    opgeslagen: "Uw gegevens zijn opgeslagen",
     annuleren: "Annuleren",
     terug: "Terug",
     verder: "Verder",
@@ -35,12 +36,16 @@ export const nl = {
 
   pincode: {
     titel: "Voer pincode in",
-    subtitel: "Vraag de eigenaar als je de code niet weet.",
     fout: "Onjuiste pincode, probeer opnieuw.",
-    vergeten: "Pincode vergeten? Log in met wachtwoord.",
+    vergeten: "Pincode vergeten?",
+    vergetenUitleg: "Log in met uw wachtwoord. Daarna kiest u een nieuwe pincode.",
+    foutMetPogingen: (n: number) => `Verkeerde PIN-code. U heeft nog ${n} ${n === 1 ? "poging" : "pogingen"}.`,
+    geblokkeerd: "U heeft te vaak een onjuiste pincode ingevoerd. Log in met uw wachtwoord.",
     vergetenLokaal: "Pincode vergeten? Wis de gegevens op dit apparaat.",
     wisBevestiging: "Alle gegevens, instellingen en de pincode worden van dit apparaat gewist en kunnen niet worden hersteld (tenzij u een back-up heeft). Doorgaan?",
     wissen: "Wissen",
+    instellenTitel: "Kies een pincode",
+    instellenUitleg: "Deze pincode is verplicht en geldt alleen voor dit apparaat. Op een andere telefoon of tablet mag u een andere pincode kiezen.",
   },
 
   start: {
@@ -52,8 +57,8 @@ export const nl = {
     schoonmaakStatus: (aantal: number) => (aantal === 0 ? "Deze week nog niets afgevinkt" : `Deze week: ${aantal} keer afgevinkt`),
     weekformulierStatus: (afwijkingen: number, ingevuld: boolean) =>
       !ingevuld ? "Deze week nog niets ingevuld" : afwijkingen === 0 ? "Deze week: geen afwijkingen" : `Deze week: ${afwijkingen} ${afwijkingen === 1 ? "afwijking" : "afwijkingen"}`,
-    leveranciersStatus: (maand: string, beoordeeld: number, totaal: number) =>
-      totaal === 0 ? "Nog geen leveranciers toegevoegd" : `${maand}: ${beoordeeld} van ${totaal} beoordeeld`,
+    leveranciersStatus: (maand: string, aantal: number) =>
+      aantal === 0 ? `${maand}: nog geen controles` : `${maand}: ${aantal} ${aantal === 1 ? "controle" : "controles"}`,
     documenten: "Documenten",
   },
 
@@ -165,6 +170,15 @@ export const nl = {
     afgedekt: "Producten afgedekt",
     nvt: "NVT",
     fifoTht: "FIFO & THT producten",
+    olieVerversOp: "Wanneer olie ververst",
+    olieVerversPdf: (datum: string) => `Olie ververst: ${datum}`,
+    verbergen: "Verbergen (n.v.t.)",
+    tonen: "Weer tonen",
+    verborgenTitel: (aantal: number) => `${aantal} verborgen (n.v.t.)`,
+    verborgenInstellingenTitel: "Weekformulier: verborgen punten",
+    verborgenInstellingenUitleg: "Verborgen punten verschijnen niet in het weekformulier en staan als n.v.t. in de pdf.",
+    zichtbaar: "Zichtbaar",
+    verborgen: "Verborgen",
     phWaarde: "pH-waarde",
     tijdMinuten: "Tijd (minuten)",
     beoordeeldDoor: "Beoordeeld door (HACCP-verantwoordelijke)",
@@ -179,7 +193,7 @@ export const nl = {
     eenheden: {
       koelcel: "Koelcel",
       koelkast1: "Koelkast 1",
-      koelkast2: "Koelkast 2",
+      koelkast2: "Werkbankkoeling",
       vriescel: "Vriescel",
       vriezer1: "Vriezer 1",
       vriezer2: "Vriezer 2",
@@ -188,7 +202,7 @@ export const nl = {
       warmhoudvitrine: "Warmhoudvitrine",
       koelvitrine: "Koelvitrine",
       saladiere: "Saladière",
-      friteuse1: "Friteuse 1",
+      friteuse1: "Visbakoven",
     },
     processenLijst: {
       verhitten: { naam: "Verhitten (rauw) product", norm: "kerntemperatuur ≥ 75 °C" },
@@ -202,13 +216,17 @@ export const nl = {
   leveranciers: {
     titel: "Registratie Leveranciers",
     dezeMaand: "Naar deze maand",
-    voortgang: (beoordeeld: number, totaal: number) => `${beoordeeld} van ${totaal} beoordeeld`,
-    kopieerVorige: "Kopieer vorige maand",
-    geenLeveranciers: "Nog geen leveranciers. Voeg hieronder de eerste toe.",
+    aantalControles: (aantal: number) => (aantal === 1 ? "1 controle" : `${aantal} controles`),
+    controleToevoegen: "Controle toevoegen",
+    naamLeverancier: "Naam leverancier",
     nieuweLeverancier: "Naam nieuwe leverancier",
-    toevoegen: "Leverancier toevoegen",
-    archiveren: "Leverancier archiveren",
-    archiveerBevestiging: (naam: string) => `${naam} archiveren? Eerder ingevulde maanden blijven bewaard.`,
+    voegNaamToe: (naam: string) => `“${naam}” toevoegen als nieuwe leverancier`,
+    geenControles: "Deze maand nog geen controles.",
+    verwijderBevestiging: "Deze controle verwijderen?",
+    verwijderTitel: "Controle verwijderen?",
+    verwijderUitleg: (naam: string) => `De controle van ${naam} wordt verwijderd. Dit kan niet ongedaan worden gemaakt.`,
+    datumControle: "Datum controle",
+    product: "Product(en) gecontroleerd",
     verlopen: "Certificaat verlopen",
     verloptBinnenkort: (dagen: number) => `Verloopt over ${dagen} ${dagen === 1 ? "dag" : "dagen"}`,
     certificaat: "Certificaat / overeenkomst aanwezig",
@@ -266,8 +284,9 @@ export const nl = {
     taal: "Taal / Language",
     beveiliging: "Beveiliging",
     pincodeWijzigen: "Pincode wijzigen",
-    pincodeUitschakelen: "Pincode uitschakelen",
-    pincodeInschakelen: "Pincode inschakelen",
+    vergrendelNa: "Automatisch vergrendelen na",
+    vergrendelMinuten: (m: number) => `${m} min`,
+    vergrendelNu: "Nu vergrendelen",
     pincodeNieuw: "Kies een nieuwe pincode",
     pincodeHerhaal: "Voer de pincode nog een keer in",
     pincodeNietGelijk: "De twee pincodes waren niet gelijk. Begin opnieuw.",
@@ -288,6 +307,9 @@ export const nl = {
     locaties: "Locaties",
     account: "Account",
     uitloggen: "Uitloggen",
+    huidigWachtwoord: "Huidig wachtwoord",
+    wachtwoordWijzigen: "Wachtwoord wijzigen",
+    wachtwoordOpgeslagen: "Je wachtwoord is gewijzigd.",
     ingelogdAls: (naam: string) => `Ingelogd als ${naam}`,
   },
 
@@ -350,6 +372,8 @@ export const nl = {
     leverancier1: "Visgroothandel Noordzee",
     leverancier2: "IJsvers BV",
     leverancier3: "Garnalen & Meer",
+    product1: "Zalmfilet",
+    product2: "Kabeljauw",
     afwijkingActie: "Koelcel bijgesteld, na 1 uur opnieuw gemeten: 5 °C.",
   },
 
@@ -381,6 +405,10 @@ export const nl = {
   },
 
   auth: {
+    pogingenWaarschuwing: (n: number) =>
+      `U heeft nog ${n} ${n === 1 ? "poging" : "pogingen"} om uw wachtwoord in te voeren. Daarna moet u uw wachtwoord resetten via de link in uw e-mail.`,
+    geblokkeerd: "U heeft te vaak een onjuist wachtwoord ingevoerd. Reset uw wachtwoord via de link in uw e-mail.",
+    resetlinkVersturen: "Resetlink versturen",
     inloggenTitel: "Inloggen",
     accountLadenMislukt: "Uw gegevens konden niet worden geladen",
     accountLadenUitleg: "Controleer uw internetverbinding en probeer het opnieuw. Vul de bedrijfsgegevens niet opnieuw in: uw bedrijf staat al online.",
@@ -435,6 +463,7 @@ export const nl = {
     makenMislukt: "De PDF kon niet worden gemaakt.",
   },
   pdf: {
+    nvt: "n.v.t.",
     schoonmaakplan: "Schoonmaakplan",
     weekformulier: "Weekformulier Hygiënecode",
     leveranciers: "Registratie gecertificeerde leveranciers",

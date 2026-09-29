@@ -3,8 +3,11 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase, supabaseIsGeconfigureerd } from "../lib/supabase";
 import { db } from "../db/db";
 import { nieuweId } from "../lib/id";
+import { isDemo } from "../lib/modus";
 import { t } from "../i18n";
-import { pincodeIsIngeschakeld, controleerPincode } from "../lib/pin";
+import { pincodeIsIngeschakeld, controleerPincode, zetPincode, wisPincode } from "../lib/pin";
+import { MAX_POGINGEN, haalPogingen, resetPogingen, verhoogPogingen } from "../lib/pogingen";
+import { inrichtingIsOvergeslagen, zetInrichtingOvergeslagen } from "../lib/inrichting";
 import { koppelLocatiesAanOrganisatie } from "../lib/locaties";
 import { zorgVoorEigenLokaleData } from "../lib/gebruikerWissel";
 import { haalOrganisatieEnProfielOp, verstuurOrganisatieEnProfiel } from "../lib/orgSync";
@@ -32,21 +35,37 @@ interface AuthState {
   organisatie: Organisatie | null;
   profiel: Profiel | null;
   vergrendeldDoorPincode: boolean;
+  /** Er is op dit apparaat een pincode ingesteld (verplicht om de app te gebruiken). */
+  pincodeIngesteld: boolean;
+  /** De gebruiker koos "Later invullen" bij de bedrijfsgegevens. */
+  inrichtingOvergeslagen: boolean;
+  slaInrichtingOver: () => Promise<void>;
+  /** Stelt de (verplichte) pincode van dit apparaat in en ontgrendelt. */
+  stelPincodeIn: (pincode: string) => Promise<void>;
   /** Ingelogd, maar het bedrijf kon niet van de server worden geladen (offline of serverfout). */
   accountLaadFout: boolean;
   probeerAccountOpnieuw: () => Promise<void>;
 
-  logIn: (email: string, wachtwoord: string) => Promise<{ fout?: string }>;
+  /**
+   * Na 10 mislukte wachtwoorden wordt niet meer geprobeerd (`geblokkeerd`); alleen de resetlink blijft.
+   * `ontgrendel: false` laat de app vergrendeld (voor "pincode vergeten": daarna volgt een nieuwe pincode).
+   */
+  logIn: (email: string, wachtwoord: string, opties?: { ontgrendel?: boolean }) => Promise<{ fout?: string; pogingenOver?: number; geblokkeerd?: boolean }>;
   /** Account aanmaken met een persoonlijke toegangscode van 5 cijfers. `bevestigMail` = eerst nog de e-mail bevestigen. */
   meldAan: (email: string, wachtwoord: string, toegangscode: string) => Promise<{ fout?: string; bevestigMail?: boolean }>;
   logUit: () => Promise<void>;
   verstuurResetLink: (email: string) => Promise<{ fout?: string }>;
   stelNieuwWachtwoordIn: (nieuwWachtwoord: string) => Promise<{ fout?: string }>;
+  /** Wachtwoord wijzigen vanuit Instellingen: controleert eerst het huidige wachtwoord (telt mee in de pogingenteller). */
+  wijzigWachtwoord: (huidigWachtwoord: string, nieuwWachtwoord: string) => Promise<{ fout?: string }>;
 
   richtOrganisatieIn: (gegevens: BedrijfsgegevensInvoer) => Promise<void>;
   werkOrganisatieBij: (gegevens: BedrijfsgegevensInvoer) => Promise<void>;
 
-  ontgrendelMetPincode: (pincode: string) => Promise<boolean>;
+  /** Na 5 foute pincodes (met account) is het pincodeslot dicht en moet het wachtwoord worden gebruikt. */
+  ontgrendelMetPincode: (pincode: string) => Promise<{ juist: boolean; pogingenOver: number; geblokkeerd: boolean }>;
+  /** Pincode vergeten: wist de pincode zodat er een nieuwe gekozen moet worden. */
+  vergeetPincode: () => Promise<void>;
   /** Ontgrendelt zonder pincode — voor het wachtwoord-noodpad op het pincodescherm. */
   ontgrendel: () => void;
   vergrendel: () => void;
@@ -76,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organisatie, setOrganisatie] = useState<Organisatie | null>(null);
   const [profiel, setProfiel] = useState<Profiel | null>(null);
   const [vergrendeldDoorPincode, setVergrendeldDoorPincode] = useState(true);
+  const [pincodeIngesteld, setPincodeIngesteld] = useState(false);
+  const [inrichtingOvergeslagen, setInrichtingOvergeslagen] = useState(false);
   const [accountLaadFout, setAccountLaadFout] = useState(false);
 
   useEffect(() => {
@@ -94,7 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         supabase.auth.onAuthStateChange((_gebeurtenis, nieuweSessie) => {
           void (async () => {
-            if (nieuweSessie && (await zorgVoorEigenLokaleData(nieuweSessie.user.id))) await laadLokaleOrganisatieEnProfiel();
+            if (nieuweSessie && (await zorgVoorEigenLokaleData(nieuweSessie.user.id))) {
+              await laadLokaleOrganisatieEnProfiel();
+              setInrichtingOvergeslagen(await inrichtingIsOvergeslagen());
+            }
             setSessie(nieuweSessie);
           })();
         });
@@ -103,7 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const pincodeAan = await pincodeIsIngeschakeld();
-      setVergrendeldDoorPincode(pincodeAan);
+      // Demo-modus heeft een eigen, lege database: daar geen verplichte pincode.
+      setPincodeIngesteld(pincodeAan || isDemo());
+      setVergrendeldDoorPincode(pincodeAan && !isDemo());
+      setInrichtingOvergeslagen(await inrichtingIsOvergeslagen());
 
       setKlaar(true);
     })();
@@ -133,13 +160,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (gebruikerId) await laadBedrijfVanServer(gebruikerId);
   };
 
-  const logIn: AuthState["logIn"] = async (email, wachtwoord) => {
+  const logIn: AuthState["logIn"] = async (email, wachtwoord, opties) => {
     if (!supabase) return { fout: t.sync.geenProject };
+    if ((await haalPogingen("wachtwoord")) >= MAX_POGINGEN.wachtwoord) return { fout: t.auth.geblokkeerd, pogingenOver: 0, geblokkeerd: true };
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: wachtwoord });
-    if (error) return { fout: vertaalAuthFout(error.message) };
+    if (error) {
+      // Alleen een echt onjuist wachtwoord telt; offline of een serverfout is geen poging.
+      if (/invalid login credentials/i.test(error.message)) {
+        const over = MAX_POGINGEN.wachtwoord - (await verhoogPogingen("wachtwoord"));
+        return { fout: vertaalAuthFout(error.message), pogingenOver: over, geblokkeerd: over <= 0 };
+      }
+      return { fout: vertaalAuthFout(error.message) };
+    }
+    await resetPogingen("wachtwoord");
+    await resetPogingen("pincode");
     await zorgVoorEigenLokaleData(data.user.id);
     await laadLokaleOrganisatieEnProfiel();
+    setInrichtingOvergeslagen(await inrichtingIsOvergeslagen());
     setSessie(data.session);
+    // Zojuist met het wachtwoord ingelogd: dat telt als ontgrendelen.
+    if (opties?.ontgrendel !== false) setVergrendeldDoorPincode(false);
     await laadBedrijfVanServer(data.user.id);
     return {};
   };
@@ -157,7 +197,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.session) {
       await zorgVoorEigenLokaleData(data.session.user.id);
       await laadLokaleOrganisatieEnProfiel();
+      setInrichtingOvergeslagen(await inrichtingIsOvergeslagen());
       setSessie(data.session);
+      setVergrendeldDoorPincode(false);
       return {};
     }
     return { bevestigMail: true };
@@ -167,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (supabase) await supabase.auth.signOut();
     setSessie(null);
     setAccountLaadFout(false);
+    setVergrendeldDoorPincode(true);
   };
 
   const verstuurResetLink: AuthState["verstuurResetLink"] = async (email) => {
@@ -184,7 +227,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return { fout: t.sync.geenProject };
     const { error } = await supabase.auth.updateUser({ password: nieuwWachtwoord });
     if (error) return { fout: vertaalAuthFout(error.message) };
+    await resetPogingen("wachtwoord");
     return {};
+  };
+
+  const wijzigWachtwoord: AuthState["wijzigWachtwoord"] = async (huidigWachtwoord, nieuwWachtwoord) => {
+    if (!supabase) return { fout: t.sync.geenProject };
+    const email = sessie?.user.email;
+    if (!email) return { fout: t.auth.onjuist };
+    if ((await haalPogingen("wachtwoord")) >= MAX_POGINGEN.wachtwoord) return { fout: t.auth.geblokkeerd };
+    const { error } = await supabase.auth.signInWithPassword({ email, password: huidigWachtwoord });
+    if (error) {
+      if (error.code === "invalid_credentials" || /invalid login credentials/i.test(error.message)) await verhoogPogingen("wachtwoord");
+      return { fout: vertaalAuthFout(error.message) };
+    }
+    await resetPogingen("wachtwoord"); // huidige wachtwoord klopte, ook als het nieuwe wordt afgewezen
+    return stelNieuwWachtwoordIn(nieuwWachtwoord);
   };
 
   const richtOrganisatieIn: AuthState["richtOrganisatieIn"] = async (gegevens) => {
@@ -218,9 +276,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const ontgrendelMetPincode: AuthState["ontgrendelMetPincode"] = async (pincode) => {
+    // Zonder account (lokale modus) is er geen wachtwoord om op terug te vallen: daar geen limiet.
+    const begrensd = supabaseIsGeconfigureerd;
+    if (begrensd && (await haalPogingen("pincode")) >= MAX_POGINGEN.pincode) return { juist: false, pogingenOver: 0, geblokkeerd: true };
     const juist = await controleerPincode(pincode);
-    if (juist) setVergrendeldDoorPincode(false);
-    return juist;
+    if (juist) {
+      await resetPogingen("pincode");
+      setVergrendeldDoorPincode(false);
+      return { juist: true, pogingenOver: MAX_POGINGEN.pincode, geblokkeerd: false };
+    }
+    if (!begrensd) return { juist: false, pogingenOver: MAX_POGINGEN.pincode, geblokkeerd: false };
+    const over = MAX_POGINGEN.pincode - (await verhoogPogingen("pincode"));
+    return { juist: false, pogingenOver: over, geblokkeerd: over <= 0 };
+  };
+
+  const vergeetPincode: AuthState["vergeetPincode"] = async () => {
+    await wisPincode();
+    await resetPogingen("pincode");
+    setPincodeIngesteld(false); // de Poortwachter stuurt door naar "Kies een pincode"
+  };
+
+  const stelPincodeIn: AuthState["stelPincodeIn"] = async (pincode) => {
+    await zetPincode(pincode);
+    setPincodeIngesteld(true);
+    setVergrendeldDoorPincode(false);
+  };
+
+  const slaInrichtingOver: AuthState["slaInrichtingOver"] = async () => {
+    await zetInrichtingOvergeslagen();
+    setInrichtingOvergeslagen(true);
   };
 
   const ontgrendel = () => setVergrendeldDoorPincode(false);
@@ -233,6 +317,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     organisatie,
     profiel,
     vergrendeldDoorPincode,
+    pincodeIngesteld,
+    inrichtingOvergeslagen,
+    slaInrichtingOver,
+    stelPincodeIn,
     accountLaadFout,
     probeerAccountOpnieuw,
     logIn,
@@ -240,9 +328,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logUit,
     verstuurResetLink,
     stelNieuwWachtwoordIn,
+    wijzigWachtwoord,
     richtOrganisatieIn,
     werkOrganisatieBij,
     ontgrendelMetPincode,
+    vergeetPincode,
     ontgrendel,
     vergrendel,
   };

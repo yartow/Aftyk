@@ -133,16 +133,11 @@ backend (Postgres, Auth, Studio, …) lokaal in Docker.
 6. `supabase stop` sluit de containers weer af. `supabase db reset` zet
    alles terug naar de staat direct na de migraties.
 
-**Bekende beperking:** bij het testen is gebleken dat de PostgREST-versie
-die de Supabase CLI op dit moment lokaal meelevert, schrijfacties
-(INSERT/UPDATE) via de REST-API ten onrechte kan weigeren onder RLS, zelfs
-met een volledig toegankelijk beleid — dit is bevestigd als een probleem in
-de lokale Docker-images zelf (rechtstreeks geverifieerd met SQL tegen
-Postgres, buiten PostgREST om), niet in het schema of de RLS-policies van
-dit project. Lezen (bijv. het ophalen van sjablonen) werkt wel betrouwbaar
-lokaal. Voor het écht end-to-end testen van inloggen → inrichten →
-synchroniseren is een gratis cloud-project (hierboven) op dit moment
-betrouwbaarder.
+**Let op (opgelost):** eerder stond hier dat lokaal schrijven via de REST-API "ten onrechte" werd geweigerd
+onder RLS. Dat bleek een echte fout in de app: het versturen van de bedrijfsgegevens gebruikte een
+*upsert*, en Postgres toetst bij `INSERT … ON CONFLICT DO UPDATE` de nieuwe rij ook aan de SELECT-policy
+("eigen organisatie"), die pas geldt ná het aanmaken van het profiel. De app doet nu eerst een gewone
+insert en, bij een bestaande rij, een update (`lib/orgSync.ts`). Dit speelde ook op een cloud-project.
 
 ## 7. Voorkom dat het gratis project in slaap valt
 
@@ -153,3 +148,14 @@ dan nodig hebt. Zet een gratis wekelijkse cronjob (bijv. via
 [cron-job.org](https://cron-job.org)) die een simpele request doet naar je
 project-URL, bijvoorbeeld naar `/rest/v1/` met de anon-key als header — dat
 is genoeg om het project actief te houden.
+
+## Keep-alive: het project wakker houden
+
+Een gratis Supabase-project wordt na 7 dagen zonder activiteit gepauzeerd.
+Daarom pingt een GitHub Action (`.github/workflows/supabase-keepalive.yml`) het project twee keer per week.
+
+1. Voer [`migrations/0005_ping.sql`](./migrations/0005_ping.sql) uit in de SQL Editor.
+2. GitHub-repo → **Settings → Secrets and variables → Actions → New repository secret**: maak `SUPABASE_URL` (bijv. `https://xxxx.supabase.co`) en `SUPABASE_ANON_KEY` aan, met dezelfde waarden als `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
+3. **Actions → Supabase keep-alive → Run workflow** om het één keer handmatig te testen (groen vinkje = gelukt).
+
+Let op: GitHub schakelt geplande workflows uit na 60 dagen zonder commits in de repo; je krijgt dan een e-mail met een knop om ze weer aan te zetten.

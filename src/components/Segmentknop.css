@@ -3,10 +3,11 @@
 .segment { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
 .segment-knop {
-  flex: 1 1 0;
+  flex: 1 0 auto;
   min-width: 4rem;
+  white-space: nowrap;
   min-height: var(--raakdoel-min);
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.625rem;
   border: 0.125rem solid var(--kleur-rand);
   border-radius: var(--radius);
   background: var(--kleur-oppervlak);

@@ -207,6 +207,10 @@ plain HTML site:
 3. Make sure the site is served over **HTTPS** (cPanel AutoSSL) — required for the PWA install prompt and for `navigator.storage.persist()` to work.
 4. No `.htaccess` rewrite rules are needed: the app uses a hash-based router (`/#/schoonmaakplan`, etc.) specifically so client-side routing works on hosting that can't be configured to redirect unknown paths to `index.html`.
 
+### Automatic deploy (GitHub Actions)
+
+`.github/workflows/deploy.yml` builds the app and uploads `dist/` over FTPS on every push/merge to `main` (or manually via *Actions → Deploy → Run workflow*). It needs these repository secrets: `SUPABASE_URL`, `SUPABASE_ANON_KEY` (baked into the build) and `FTP_PASSWORD`. The FTP server and username are in the workflow file; adjust `server-dir` if the app lives in a subfolder of the FTP account's home directory.
+
 Any other static host (Cloudflare Pages, Netlify, GitHub Pages, …) works the same way — just point it at `dist/`.
 
 ## Responsive design

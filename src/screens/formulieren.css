@@ -40,6 +40,9 @@
   align-items: end;
 }
 
+/* Label boven een veld (ook boven de datumknop) met vaste ruimte ertussen. */
+.veld { display: flex; flex-direction: column; gap: 0.375rem; }
+
 .kaartlijst { display: flex; flex-direction: column; gap: var(--ruimte-m); }
 
 .kaart-kop {

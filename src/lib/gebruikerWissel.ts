@@ -2,7 +2,7 @@ import Dexie from "dexie";
 import { db } from "../db/db";
 
 /** Instellingen die bij het apparaat horen, niet bij een gebruiker: die blijven staan bij een wissel. */
-const BLIJFT_OP_APPARAAT = new Set(["pincode_hash", "pincode_ingeschakeld", "tekstgrootte", "thema"]);
+const BLIJFT_OP_APPARAAT = new Set(["pincode_hash", "pincode_ingeschakeld", "vergrendel_minuten", "pincode_pogingen", "wachtwoord_pogingen", "tekstgrootte", "thema"]);
 
 function bewaardeDb(gebruikerId: string): Dexie {
   const bewaard = new Dexie(`${db.name}-bewaard-${gebruikerId}`);

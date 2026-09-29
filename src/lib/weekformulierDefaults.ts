@@ -1,5 +1,5 @@
 import { t } from "../i18n";
-import type { CcpRij, OpslagRij, Weekformulier } from "../types/domain";
+import type { CcpRij, OpslagRij, Weekformulier, WeekformulierConfig } from "../types/domain";
 
 export interface OpslagEenheid {
   id: keyof typeof t.weekformulier.eenheden;
@@ -7,6 +7,8 @@ export interface OpslagEenheid {
   readonly naam: string;
   grens: { soort: "max" | "min"; waarde: number };
   afgedektNvt?: boolean;
+  /** Friteuse/visbakoven: geen "afgedekt" en "FIFO & THT", wel "wanneer olie ververst". */
+  soort?: "friteuse";
 }
 
 /** Vaste rijen uit "Weekformulier Hygiënecode voor de Visdetailhandel.docx". */
@@ -22,7 +24,7 @@ export const OPSLAG_EENHEDEN: OpslagEenheid[] = [
   { id: "warmhoudvitrine", get naam() { return t.weekformulier.eenheden.warmhoudvitrine; }, grens: { soort: "min", waarde: 60 } },
   { id: "koelvitrine", get naam() { return t.weekformulier.eenheden.koelvitrine; }, grens: { soort: "max", waarde: 7 } },
   { id: "saladiere", get naam() { return t.weekformulier.eenheden.saladiere; }, grens: { soort: "max", waarde: 7 } },
-  { id: "friteuse1", get naam() { return t.weekformulier.eenheden.friteuse1; }, grens: { soort: "max", waarde: 175 } },
+  { id: "friteuse1", get naam() { return t.weekformulier.eenheden.friteuse1; }, grens: { soort: "max", waarde: 175 }, soort: "friteuse" },
 ];
 
 export interface CcpProces {
@@ -82,6 +84,11 @@ export const CCP_PROCESSEN: CcpProces[] = [
   },
 ];
 
+/** Standaard n.v.t. voor deze winkel; per locatie aan te passen in Instellingen. */
+export function standaardWeekformulierConfig(): WeekformulierConfig {
+  return { verborgen: ["vispresentatie", "bainmarie1", "warmhoudvitrine", "koelvitrine", "saladiere", "regenereren"] };
+}
+
 export function leesGetal(tekst: string): number | null {
   const n = Number(tekst.replace(",", ".").trim());
   return tekst.trim() === "" || Number.isNaN(n) ? null : n;
@@ -125,7 +132,7 @@ export function grensTekst(e: OpslagEenheid): string {
 }
 
 export function leegOpslagRij(): OpslagRij {
-  return { datum: "", temperatuur: "", afgedekt: null, fifoTht: null, paraaf: "", actie: "" };
+  return { datum: "", temperatuur: "", afgedekt: null, fifoTht: null, olieVerversOp: "", paraaf: "", actie: "" };
 }
 
 export function leegCcpRij(): CcpRij {

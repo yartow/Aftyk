@@ -68,6 +68,7 @@ export type DocumentSoort =
   | "schoonmaak-week" // afvinkblokjes per dag
   | "schoonmaak-maand" // "uitgevoerd op"-datums voor maandelijkse items
   | "weekformulier"
+  | "weekformulier-config" // welke punten verborgen zijn (n.v.t.)
   | "leveranciers-config" // de lijst met leveranciers
   | "leveranciers-maand";
 
@@ -134,6 +135,8 @@ export interface OpslagRij {
   temperatuur: string;
   afgedekt: VO;
   fifoTht: VO;
+  /** Alleen voor de visbakoven (friteuse): wanneer de olie is ververst (YYYY-MM-DD). */
+  olieVerversOp?: string;
   paraaf: string;
   actie: string;
 }
@@ -153,6 +156,11 @@ export interface Weekformulier {
   ccps: Record<string, CcpRij>;
   beoordeeldDoor: string;
   beoordeeldOp: string;
+}
+
+export interface WeekformulierConfig {
+  /** Ids van opslageenheden en processen die verborgen zijn en als "n.v.t." gelden. */
+  verborgen: string[];
 }
 
 export interface Leverancier {
@@ -176,6 +184,18 @@ export interface LeveranciersConfig {
   leveranciers: Leverancier[];
 }
 
+/** Eén steekproef bij een leverancier (één à twee keer per week). */
+export interface LeverancierControle extends LeverancierBeoordeling {
+  id: string;
+  leverancierId: string;
+  /** Naam op het moment van de controle, zodat de historie leesbaar blijft als de leverancier later verdwijnt. */
+  leverancierNaam: string;
+  datum: string; // YYYY-MM-DD
+  product: string;
+}
+
 export interface LeveranciersMaand {
-  beoordelingen: Record<string, LeverancierBeoordeling>; // leverancierId → beoordeling
+  controles: LeverancierControle[];
+  /** Oud formaat (één beoordeling per leverancier per maand); wordt bij het lezen omgezet naar controles. */
+  beoordelingen?: Record<string, LeverancierBeoordeling>;
 }
