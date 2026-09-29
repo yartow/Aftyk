@@ -15,6 +15,7 @@ export function StatusBalk() {
   const aantalOnverstuurd = useLiveQuery(() => db.uitgaand.count(), []) ?? 0;
   const [laatsteSync, setLaatsteSync] = useState<Date | null>(null);
   const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
 
   useEffect(() => {
     laatsteSyncTijd().then(setLaatsteSync);
@@ -26,7 +27,9 @@ export function StatusBalk() {
 
   async function handSync() {
     setBezig(true);
-    await synchroniseerNu(true);
+    setFout(null);
+    const resultaat = await synchroniseerNu(true);
+    if (!resultaat.gelukt) setFout(resultaat.foutmelding ?? t.instellingen.synchronisatieMislukt);
     setLaatsteSync(await laatsteSyncTijd());
     setBezig(false);
   }
@@ -37,6 +40,7 @@ export function StatusBalk() {
         {aantalOnverstuurd > 0 ? t.sync.nogNietVerstuurd(aantalOnverstuurd) : t.instellingen.synchronisatieGelukt}
         {" · "}
         {laatsteSync ? t.sync.laatstGesynchroniseerd(formatteerDatumTijd(laatsteSync)) : t.sync.nooitGesynchroniseerd}
+        {fout ? <><br />{fout}</> : null}
       </span>
       <button type="button" className="statusbalk-knop" onClick={handSync} disabled={bezig}>
         {bezig ? t.instellingen.bezigMetSynchroniseren : t.instellingen.nuSynchroniseren}
