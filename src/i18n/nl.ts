@@ -358,6 +358,12 @@ export const nl = {
     locatie: "Locatie",
   },
 
+  installatie: {
+    titel: "Zet de app op uw beginscherm",
+    uitleg: 'Tik onderin op Deel (het vierkantje met een pijl omhoog), kies "Zet op beginscherm" en tik op "Voeg toe". Open de app daarna via het icoon. Zo blijven uw gegevens bewaard.',
+    begrepen: "Begrepen",
+  },
+
   demo: {
     banner: "Demo-modus — wat u invult wordt niet in uw echte administratie opgeslagen.",
     verlaten: "Demo verlaten",

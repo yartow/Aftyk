@@ -22,6 +22,7 @@ import { Knop } from "./components/Knop";
 import { t } from "./i18n";
 import { DemoBanner } from "./components/DemoBanner";
 import { BijwerkMelding } from "./components/BijwerkMelding";
+import { InstallatieTip } from "./components/InstallatieTip";
 
 /**
  * Bepaalt in welke fase de app zit en stuurt onbereikbare routes terug naar
@@ -129,6 +130,7 @@ export default function App() {
     <HashRouter key={taal}>
       <DemoBanner />
       <Schermen />
+      <InstallatieTip />
       <BijwerkMelding />
     </HashRouter>
   );
