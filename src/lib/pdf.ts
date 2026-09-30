@@ -12,7 +12,7 @@ import type {
 } from "../types/domain";
 import { dagenVanWeek, maandLabel, weekLabel, weekdagen } from "./kalender";
 import { FREQUENTIE_NAMEN, methodeTekst, middelNaam, objectNaam } from "./schoonmaakDefaults";
-import { CCP_PROCESSEN, OPSLAG_EENHEDEN, ccpAfwijking, grensTekst, opslagAfwijking } from "./weekformulierDefaults";
+import { CCP_PROCESSEN, ccpAfwijking, grensTekst, opslagAfwijking, type OpslagEenheid } from "./weekformulierDefaults";
 import { adresRegel } from "./locaties";
 import { formatteerDatumKort, t } from "../i18n";
 
@@ -202,7 +202,7 @@ export function maakSchoonmaakplanPdf(
   return doc.output("blob");
 }
 
-export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: Weekformulier, verborgen: ReadonlySet<string>): Blob {
+export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: Weekformulier, verborgen: ReadonlySet<string>, eenheden: OpslagEenheid[]): Blob {
   const { titel, periode } = weekLabel(maandag);
   const { doc, tabel, eindY, kopje } = nieuwDocument("landscape", bron, t.pdf.weekformulier, `${titel} (${periode})`);
   const w = t.weekformulier;
@@ -222,7 +222,7 @@ export function maakWeekformulierPdf(bron: PdfBron, maandag: Date, formulier: We
   tabel({
     startY: y,
     head: [[w.kolOpslag, w.kolNorm, w.datum, t.pdf.kolTemp, t.pdf.kolAfgedekt, t.pdf.kolFifo, w.paraaf, w.actie]],
-    body: OPSLAG_EENHEDEN.map((e) => {
+    body: eenheden.map((e) => {
       if (verborgen.has(e.id)) return [e.naam, pdfTekst(grensTekst(e)), nvtCel];
       const r = formulier.opslag[e.id];
       const afwijking = r ? opslagAfwijking(e, r.temperatuur) : false;

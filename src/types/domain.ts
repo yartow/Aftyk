@@ -158,9 +158,26 @@ export interface Weekformulier {
   beoordeeldOp: string;
 }
 
+export type EenheidSoort = "koeling" | "diepvries" | "warmhouden" | "friteuse";
+
+/** Eén opslageenheid (koeling, diepvries, vitrine, friteuse) in de volgorde van het weekformulier. */
+export interface EenheidConfig {
+  /** Standaard-id (bv. "koelcel") of een nieuweId() voor zelf toegevoegde eenheden. */
+  id: string;
+  soort: EenheidSoort;
+  /** Eigen naam; leeg = de vertaalde standaardnaam. */
+  naam?: string;
+  /** Zelf toegevoegd, en dus te verwijderen. */
+  eigen?: true;
+  /** Verwijderd: staat niet meer in nieuwe weken, maar oude weken met data blijven compleet. */
+  verwijderd?: true;
+}
+
 export interface WeekformulierConfig {
   /** Ids van opslageenheden en processen die verborgen zijn en als "n.v.t." gelden. */
   verborgen: string[];
+  /** Opslageenheden in weergavevolgorde. Ontbreekt = de standaardlijst. */
+  eenheden?: EenheidConfig[];
 }
 
 export interface Leverancier {

@@ -1,31 +1,80 @@
 import { t } from "../i18n";
-import type { CcpRij, OpslagRij, Weekformulier, WeekformulierConfig } from "../types/domain";
+import type { CcpRij, EenheidConfig, EenheidSoort, OpslagRij, Weekformulier, WeekformulierConfig } from "../types/domain";
 
 export interface OpslagEenheid {
-  id: keyof typeof t.weekformulier.eenheden;
-  /** Naam in de gekozen taal. */
+  id: string;
+  /** Eigen naam of, zonder die, de naam in de gekozen taal. */
   readonly naam: string;
+  /** Alleen de door de gebruiker ingestelde naam; leeg = standaardnaam. */
+  eigenNaam?: string;
+  soort: EenheidSoort;
   grens: { soort: "max" | "min"; waarde: number };
   afgedektNvt?: boolean;
-  /** Friteuse/visbakoven: geen "afgedekt" en "FIFO & THT", wel "wanneer olie ververst". */
-  soort?: "friteuse";
+  /** Zelf toegevoegd door de gebruiker (en dus te verwijderen). */
+  eigen?: boolean;
 }
 
+/** Temperatuurnorm per soort eenheid. */
+export const NORM_PER_SOORT: Record<EenheidSoort, { soort: "max" | "min"; waarde: number }> = {
+  koeling: { soort: "max", waarde: 7 },
+  diepvries: { soort: "max", waarde: -18 },
+  warmhouden: { soort: "min", waarde: 60 },
+  friteuse: { soort: "max", waarde: 175 },
+};
+
+export const EENHEID_SOORTEN: EenheidSoort[] = ["koeling", "diepvries", "warmhouden", "friteuse"];
+
+type StandaardId = keyof typeof t.weekformulier.eenheden;
+
 /** Vaste rijen uit "Weekformulier Hygiënecode voor de Visdetailhandel.docx". */
-export const OPSLAG_EENHEDEN: OpslagEenheid[] = [
-  { id: "koelcel", get naam() { return t.weekformulier.eenheden.koelcel; }, grens: { soort: "max", waarde: 7 } },
-  { id: "koelkast1", get naam() { return t.weekformulier.eenheden.koelkast1; }, grens: { soort: "max", waarde: 7 } },
-  { id: "koelkast2", get naam() { return t.weekformulier.eenheden.koelkast2; }, grens: { soort: "max", waarde: 7 } },
-  { id: "vriescel", get naam() { return t.weekformulier.eenheden.vriescel; }, grens: { soort: "max", waarde: -18 } },
-  { id: "vriezer1", get naam() { return t.weekformulier.eenheden.vriezer1; }, grens: { soort: "max", waarde: -18 } },
-  { id: "vriezer2", get naam() { return t.weekformulier.eenheden.vriezer2; }, grens: { soort: "max", waarde: -18 } },
-  { id: "vispresentatie", get naam() { return t.weekformulier.eenheden.vispresentatie; }, grens: { soort: "max", waarde: 7 }, afgedektNvt: true },
-  { id: "bainmarie1", get naam() { return t.weekformulier.eenheden.bainmarie1; }, grens: { soort: "min", waarde: 60 } },
-  { id: "warmhoudvitrine", get naam() { return t.weekformulier.eenheden.warmhoudvitrine; }, grens: { soort: "min", waarde: 60 } },
-  { id: "koelvitrine", get naam() { return t.weekformulier.eenheden.koelvitrine; }, grens: { soort: "max", waarde: 7 } },
-  { id: "saladiere", get naam() { return t.weekformulier.eenheden.saladiere; }, grens: { soort: "max", waarde: 7 } },
-  { id: "friteuse1", get naam() { return t.weekformulier.eenheden.friteuse1; }, grens: { soort: "max", waarde: 175 }, soort: "friteuse" },
+const STANDAARD_EENHEDEN: { id: StandaardId; soort: EenheidSoort; afgedektNvt?: boolean }[] = [
+  { id: "koelcel", soort: "koeling" },
+  { id: "koelkast1", soort: "koeling" },
+  { id: "koelkast2", soort: "koeling" },
+  { id: "vriescel", soort: "diepvries" },
+  { id: "vriezer1", soort: "diepvries" },
+  { id: "vriezer2", soort: "diepvries" },
+  { id: "vispresentatie", soort: "koeling", afgedektNvt: true },
+  { id: "bainmarie1", soort: "warmhouden" },
+  { id: "warmhoudvitrine", soort: "warmhouden" },
+  { id: "koelvitrine", soort: "koeling" },
+  { id: "saladiere", soort: "koeling" },
+  { id: "friteuse1", soort: "friteuse" },
 ];
+
+const standaardVan = (id: string) => STANDAARD_EENHEDEN.find((e) => e.id === id);
+
+/** De standaardlijst als configuratie; de basis zolang de gebruiker niets heeft aangepast. */
+export function standaardEenheden(): EenheidConfig[] {
+  return STANDAARD_EENHEDEN.map((e) => ({ id: e.id, soort: e.soort }));
+}
+
+/** Het standaardnaam-alternatief voor een eenheid zonder eigen naam. */
+export function standaardNaam(id: string, soort: EenheidSoort): string {
+  return standaardVan(id) ? t.weekformulier.eenheden[id as StandaardId] : t.weekformulier.eenheidSoorten[soort];
+}
+
+function heeftOpslagData(r: OpslagRij | undefined): boolean {
+  return !!r && !!(r.temperatuur || r.paraaf || r.actie || r.afgedekt || r.fifoTht || r.olieVerversOp);
+}
+
+/**
+ * De eenheden van het weekformulier in de ingestelde volgorde. Verwijderde eenheden
+ * blijven alleen staan als de meegegeven week er nog gegevens over bevat.
+ */
+export function eenhedenUitConfig(config: WeekformulierConfig, opslag?: Record<string, OpslagRij>): OpslagEenheid[] {
+  return (config.eenheden ?? standaardEenheden())
+    .filter((e) => !e.verwijderd || heeftOpslagData(opslag?.[e.id]))
+    .map((e) => ({
+      id: e.id,
+      get naam() { return e.naam?.trim() || standaardNaam(e.id, e.soort); },
+      eigenNaam: e.naam?.trim() || undefined,
+      soort: e.soort,
+      grens: NORM_PER_SOORT[e.soort],
+      afgedektNvt: standaardVan(e.id)?.afgedektNvt,
+      eigen: e.eigen,
+    }));
+}
 
 export interface CcpProces {
   id: keyof typeof t.weekformulier.processenLijst;

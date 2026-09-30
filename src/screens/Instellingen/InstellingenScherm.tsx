@@ -18,8 +18,7 @@ import { maakBackupBestand, herstelBackupBestand } from "../../lib/backup";
 import { zetPincode } from "../../lib/pin";
 import { VERGRENDEL_OPTIES, haalVergrendelMinuten, zetVergrendelMinuten } from "../../lib/vergrendeling";
 import { Segmentknop } from "../../components/Segmentknop";
-import { useWeekformulierConfig } from "../../lib/weekformulierConfig";
-import { CCP_PROCESSEN, OPSLAG_EENHEDEN } from "../../lib/weekformulierDefaults";
+import { WeekformulierEenheden } from "./WeekformulierEenheden";
 import { t, type Taal } from "../../i18n";
 import type { Tekstgrootte, Thema } from "../../types/domain";
 
@@ -30,7 +29,6 @@ export function InstellingenScherm() {
   const [verwijderSoort, setVerwijderSoort] = useState<"lokaal" | "online" | null>(null);
   const demo = isDemo();
   const { actieveLocatie } = useLocatie();
-  const { verborgen, zetVerborgen } = useWeekformulierConfig();
 
   const [pincodeStap, setPincodeStap] = useState<"uit" | "invoeren" | "herhalen">("uit");
   const [nieuwePincode, setNieuwePincode] = useState("");
@@ -219,29 +217,7 @@ export function InstellingenScherm() {
           </Kaart>
         </section>
 
-        {verborgen ? (
-          <section>
-            <h2>{t.weekformulier.verborgenInstellingenTitel}</h2>
-            <Kaart style={{ display: "flex", flexDirection: "column", gap: "var(--ruimte-m)" }}>
-              <p className="tekst-zwak" style={{ margin: 0 }}>
-                {t.weekformulier.verborgenInstellingenUitleg}
-              </p>
-              {[...OPSLAG_EENHEDEN, ...CCP_PROCESSEN].map((punt) => (
-                <Segmentknop<"zichtbaar" | "verborgen">
-                  key={punt.id}
-                  label={punt.naam}
-                  leegmaken={false}
-                  opties={[
-                    { waarde: "zichtbaar", label: t.weekformulier.zichtbaar },
-                    { waarde: "verborgen", label: t.weekformulier.verborgen },
-                  ]}
-                  waarde={verborgen.has(punt.id) ? "verborgen" : "zichtbaar"}
-                  onWijzig={(w) => w && zetVerborgen(punt.id, w === "verborgen")}
-                />
-              ))}
-            </Kaart>
-          </section>
-        ) : null}
+        <WeekformulierEenheden />
 
         {modus === "supabase" ? (
           <section>

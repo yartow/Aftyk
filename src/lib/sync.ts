@@ -60,8 +60,14 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
   const profiel = await db.profielen.toCollection().first();
   let verstuurd = 0;
   let fouten = 0;
-  let laatsteFoutTekst: string | undefined;
+  // Alle verschillende foutmeldingen bewaren: een fout bij de locaties (die eerst komt) mag niet
+  // worden overschreven door de gevolgfout "foreign key" bij de documenten.
+  const foutmeldingen: string[] = [];
   const tekstVan = (fout: unknown) => (fout instanceof Error ? fout.message : (fout as { message?: string })?.message ?? String(fout));
+  const meld = (tekst: string) => {
+    if (!foutmeldingen.includes(tekst)) foutmeldingen.push(tekst);
+    return tekst;
+  };
   if (profiel && profiel.id === sessieData.session.user.id) {
     const orgFout = await verstuurOrganisatieEnProfiel(organisatie, profiel);
     // Zonder online bedrijf en profiel weigert de server alle documenten en locaties: meld dat duidelijk.
@@ -74,7 +80,7 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
     await haalLocatiesOp();
   } catch (fout) {
     fouten += 1;
-    laatsteFoutTekst = tekstVan(fout);
+    meld(tekstVan(fout));
   }
 
   const wachtrij = await db.uitgaand.orderBy("aangemaaktOp").toArray();
@@ -93,10 +99,10 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
       verstuurd += 1;
     } catch (fout) {
       fouten += 1;
-      laatsteFoutTekst = tekstVan(fout);
+      const tekst = meld(tekstVan(fout));
       await db.uitgaand.update(item.id, {
         pogingen: item.pogingen + 1,
-        laatsteFout: laatsteFoutTekst,
+        laatsteFout: tekst,
       });
     }
   }
@@ -105,11 +111,11 @@ export async function synchroniseerNu(handmatig = false): Promise<SyncResultaat>
     await haalDocumentenOp();
   } catch (fout) {
     fouten += 1;
-    laatsteFoutTekst = tekstVan(fout);
+    meld(tekstVan(fout));
   }
 
   await zetInstelling(SLEUTEL_LAATSTE_SYNC, new Date().toISOString());
-  return { gelukt: fouten === 0, verstuurd, fouten, foutmelding: laatsteFoutTekst };
+  return { gelukt: fouten === 0, verstuurd, fouten, foutmelding: foutmeldingen.length ? foutmeldingen.join(" · ") : undefined };
 }
 
 export async function laatsteSyncTijd(): Promise<Date | null> {
@@ -144,9 +150,23 @@ async function verstuurDocument(organisatieId: string, document: Document): Prom
   if (error) throw error;
 }
 
+/**
+ * Op dit apparaat staan alleen gegevens van het bedrijf van de ingelogde gebruiker
+ * (zie gebruikerWissel). Een locatie met een leeg of ander bedrijfs-id is dus
+ * achtergebleven of verkeerd gekoppeld. Zonder herstel komt zo'n locatie nooit online,
+ * terwijl de documenten ernaar verwijzen en de server ze weigert (foreign key).
+ */
+async function herstelLocatieKoppeling(organisatieId: string): Promise<void> {
+  const scheef = (await db.locaties.toArray()).filter((l) => l.organisatieId !== organisatieId);
+  if (scheef.length === 0) return;
+  const nu = new Date().toISOString();
+  await db.locaties.bulkPut(scheef.map((l) => ({ ...l, organisatieId, bijgewerktOp: nu })));
+}
+
 async function verstuurLocaties(organisatieId: string): Promise<void> {
   if (!supabase) return;
-  const lokaal = (await db.locaties.toArray()).filter((l) => !l.organisatieId || l.organisatieId === organisatieId);
+  await herstelLocatieKoppeling(organisatieId);
+  const lokaal = await db.locaties.toArray();
   if (lokaal.length === 0) return;
   const { data: server, error: leesFout } = await supabase.from("locaties").select("id, bijgewerkt_op");
   if (leesFout) throw leesFout;
