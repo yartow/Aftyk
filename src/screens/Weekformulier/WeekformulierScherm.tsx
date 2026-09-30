@@ -21,7 +21,6 @@ import { LeverancierZoeker } from "../../components/LeverancierZoeker";
 import { maakWeekformulierPdf, pdfBestandsnaam } from "../../lib/pdf";
 import {
   CCP_PROCESSEN,
-  OPSLAG_EENHEDEN,
   alleenGetal,
   ccpAfwijking,
   grensTekst,
@@ -80,11 +79,12 @@ export function WeekformulierScherm() {
     setControleDatum("");
   };
   const leveranciers = useDocument<LeveranciersConfig>("leveranciers-config", "config", () => ({ leveranciers: [] }));
-  const { verborgen, zetVerborgen } = useWeekformulierConfig();
+  const { verborgen, zetVerborgen, eenheden } = useWeekformulierConfig();
 
   if (!formulier.waarde || !verborgen) return null;
-  const zichtbareOpslag = OPSLAG_EENHEDEN.filter((e) => !verborgen.has(e.id));
-  const verborgenOpslag = OPSLAG_EENHEDEN.filter((e) => verborgen.has(e.id));
+  const alleOpslag = eenheden(formulier.waarde.opslag);
+  const zichtbareOpslag = alleOpslag.filter((e) => !verborgen.has(e.id));
+  const verborgenOpslag = alleOpslag.filter((e) => verborgen.has(e.id));
   const zichtbareCcps = CCP_PROCESSEN.filter((p) => !verborgen.has(p.id));
   const verborgenCcps = CCP_PROCESSEN.filter((p) => verborgen.has(p.id));
   const f = formulier.waarde;
@@ -132,7 +132,7 @@ export function WeekformulierScherm() {
     formulier.wijzig((w) => ({ ...w, ontvangst: [...w.ontvangst, rij] }));
   }
 
-  const maakPdf = () => maakWeekformulierPdf(pdfBron, maandag, f, verborgen);
+  const maakPdf = () => maakWeekformulierPdf(pdfBron, maandag, f, verborgen, alleOpslag);
 
   function kopieerDatum() {
     if (!controleDatum) return;

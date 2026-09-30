@@ -7,6 +7,8 @@ interface Optie<T extends string> {
 
 interface SegmentknopProps<T extends string> {
   label?: string;
+  /** Toegankelijke naam als er geen zichtbaar label is. */
+  ariaLabel?: string;
   opties: Optie<T>[];
   waarde: T | null;
   onWijzig: (waarde: T | null) => void;
@@ -15,9 +17,9 @@ interface SegmentknopProps<T extends string> {
 }
 
 /** Ja/Nee, V/O, Goed/Matig/Slecht: grote knoppen naast elkaar, gekozen optie met ✓ (niet alleen kleur). */
-export function Segmentknop<T extends string>({ label, opties, waarde, onWijzig, leegmaken = true }: SegmentknopProps<T>) {
+export function Segmentknop<T extends string>({ label, ariaLabel, opties, waarde, onWijzig, leegmaken = true }: SegmentknopProps<T>) {
   return (
-    <div className="segment-groep" role="radiogroup" aria-label={label}>
+    <div className="segment-groep" role="radiogroup" aria-label={ariaLabel ?? label}>
       {label ? <span className="invoerveld-label">{label}</span> : null}
       <div className="segment">
         {opties.map((optie) => {

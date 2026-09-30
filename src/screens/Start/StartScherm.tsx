@@ -10,7 +10,7 @@ import { Blad } from "../../components/Blad";
 import { useLocatie } from "../../context/LocatieContext";
 import { documentId } from "../../lib/documenten";
 import { maandagVan, maandLabel, maandSleutel, weekSleutel } from "../../lib/kalender";
-import { CCP_PROCESSEN, OPSLAG_EENHEDEN, ccpAfwijking, opslagAfwijking, standaardWeekformulierConfig } from "../../lib/weekformulierDefaults";
+import { CCP_PROCESSEN, ccpAfwijking, eenhedenUitConfig, opslagAfwijking, standaardWeekformulierConfig } from "../../lib/weekformulierDefaults";
 import { t, formatteerDatumLang } from "../../i18n";
 import type { LeveranciersConfig, LeveranciersMaand, SchoonmaakWeek, Weekformulier, WeekformulierConfig } from "../../types/domain";
 import "./Start.css";
@@ -33,7 +33,8 @@ export function StartScherm() {
       db.documenten.get(documentId("leveranciers-maand", actieveLocatieId ?? "", maand)),
       db.documenten.get(documentId("weekformulier-config", actieveLocatieId ?? "", "config")),
     ]);
-    const verborgen = new Set(((wc?.inhoud as WeekformulierConfig | undefined) ?? standaardWeekformulierConfig()).verborgen);
+    const wfConfig = (wc?.inhoud as WeekformulierConfig | undefined) ?? standaardWeekformulierConfig();
+    const verborgen = new Set(wfConfig.verborgen);
 
     const afgevinkt = Object.values((sp?.inhoud as SchoonmaakWeek | undefined)?.dagen ?? {}).reduce(
       (som, dagen) => som + dagen.filter(Boolean).length,
@@ -42,7 +43,7 @@ export function StartScherm() {
 
     const f = wf?.inhoud as Weekformulier | undefined;
     const afwijkingen = f
-      ? OPSLAG_EENHEDEN.filter((e) => !verborgen.has(e.id) && opslagAfwijking(e, f.opslag[e.id]?.temperatuur ?? "")).length +
+      ? eenhedenUitConfig(wfConfig, f.opslag).filter((e) => !verborgen.has(e.id) && opslagAfwijking(e, f.opslag[e.id]?.temperatuur ?? "")).length +
         CCP_PROCESSEN.filter((p) => !verborgen.has(p.id) && ccpAfwijking(p, f.ccps[p.id])).length +
         f.ontvangst.length
       : 0;
