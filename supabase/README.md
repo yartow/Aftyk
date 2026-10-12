@@ -152,9 +152,9 @@ is genoeg om het project actief te houden.
 ## Keep-alive: het project wakker houden
 
 Een gratis Supabase-project wordt na 7 dagen zonder activiteit gepauzeerd.
-Daarom pingt een GitHub Action (`.github/workflows/supabase-keepalive.yml`) het project twee keer per week.
+Daarom pingt een GitHub Action (`.github/workflows/supabase-keepalive.yml`) het project om de dag. De ping schrijft een heartbeat-rij naar de tabel `keepalive`, want een kale leesquery bleek niet als activiteit te tellen.
 
-1. Voer [`migrations/0005_ping.sql`](./migrations/0005_ping.sql) uit in de SQL Editor.
+1. Voer [`migrations/0005_ping.sql`](./migrations/0005_ping.sql) en daarna [`migrations/0006_keepalive_heartbeat.sql`](./migrations/0006_keepalive_heartbeat.sql) uit in de SQL Editor.
 2. GitHub-repo → **Settings → Secrets and variables → Actions → New repository secret**: maak `SUPABASE_URL` (bijv. `https://xxxx.supabase.co`) en `SUPABASE_ANON_KEY` aan, met dezelfde waarden als `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 3. **Actions → Supabase keep-alive → Run workflow** om het één keer handmatig te testen (groen vinkje = gelukt).
 

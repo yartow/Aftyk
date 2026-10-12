@@ -1,10 +1,10 @@
 name: Supabase keep-alive
 
 # Het gratis Supabase-project wordt na 7 dagen zonder activiteit gepauzeerd.
-# Twee keer per week een ping houdt het wakker.
+# Om de dag een ping (met een schrijfactie op de tabel keepalive) houdt het wakker.
 on:
   schedule:
-    - cron: "0 6 * * 1,4"
+    - cron: "0 6 */2 * *"
   workflow_dispatch:
 
 jobs:
