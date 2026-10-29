@@ -13,7 +13,7 @@ export default defineConfig({
       // nooit ongevraagd het scherm verversen terwijl iemand middenin het
       // afvinken van een checklist zit.
       registerType: "prompt",
-      includeAssets: ["icoon-32.png", "icoon-180.png"],
+      includeAssets: ["favicon.ico", "icoon-16.png", "icoon-32.png", "icoon-180.png"],
       manifest: {
         name: "Hygiënecode-registratie",
         short_name: "Hygiënecode",
